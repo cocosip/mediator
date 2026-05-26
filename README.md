@@ -132,9 +132,77 @@ func (s PingService) Execute(ctx context.Context, message string) (string, error
 
 ### Notifications
 
+#### Minimal publish/subscribe
+
+```go
+type UserCreated struct {
+	ID string
+}
+
+func main() {
+	m := mediator.New()
+
+	_ = mediator.RegisterNotificationHandler(
+		m,
+		mediator.NotificationHandlerFunc[UserCreated](
+			func(ctx context.Context, notification UserCreated) error {
+				fmt.Println("welcome", notification.ID)
+				return nil
+			},
+		),
+	)
+
+	_ = mediator.Publish(context.Background(), m, UserCreated{ID: "user-1"})
+}
+```
+
+#### Multiple subscribers
+
+Register the same notification type more than once to fan out work to multiple
+subscribers:
+
+```go
+_ = mediator.RegisterNotificationHandler(
+	m,
+	mediator.NotificationHandlerFunc[UserCreated](
+		func(ctx context.Context, notification UserCreated) error {
+			fmt.Println("send welcome email", notification.ID)
+			return nil
+		},
+	),
+)
+
+_ = mediator.RegisterNotificationHandler(
+	m,
+	mediator.NotificationHandlerFunc[UserCreated](
+		func(ctx context.Context, notification UserCreated) error {
+			fmt.Println("write audit log", notification.ID)
+			return nil
+		},
+	),
+)
+```
+
+By default, subscribers run sequentially in registration order and stop on the
+first error.
+
+#### Publisher strategies
+
 ```go
 m := mediator.New(
 	mediator.WithNotificationPublisher(mediator.SequentialPublisher{
+		ErrorStrategy: mediator.ContinueOnError,
+	}),
+)
+```
+
+Use `SequentialPublisher` when you want deterministic in-order execution.
+
+Use `ParallelPublisher` when subscribers can run independently:
+
+```go
+m := mediator.New(
+	mediator.WithNotificationPublisher(mediator.ParallelPublisher{
 		ErrorStrategy: mediator.ContinueOnError,
 	}),
 )
