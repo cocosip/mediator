@@ -66,6 +66,8 @@ func Send[TRequest any, TResponse any](ctx context.Context, m *Mediator, request
 
 	m.requestMu.RLock()
 	handler, ok := m.requestHandlers[key]
+	registeredBehaviors := m.requestBehaviors[key]
+	behaviors := append([]pipelineBehaviorExecutor(nil), registeredBehaviors...)
 	m.requestMu.RUnlock()
 	if !ok {
 		return zero, HandlerNotFoundError{
@@ -74,7 +76,28 @@ func Send[TRequest any, TResponse any](ctx context.Context, m *Mediator, request
 		}
 	}
 
-	response, err := handler.handle(ctx, request)
+	if len(behaviors) == 0 {
+		response, err := handler.handle(ctx, request)
+		if err != nil {
+			return zero, err
+		}
+
+		return response.(TResponse), nil
+	}
+
+	next := func(nextCtx context.Context) (any, error) {
+		return handler.handle(nextCtx, request)
+	}
+
+	for i := len(behaviors) - 1; i >= 0; i-- {
+		behavior := behaviors[i]
+		currentNext := next
+		next = func(nextCtx context.Context) (any, error) {
+			return behavior.handle(nextCtx, request, currentNext)
+		}
+	}
+
+	response, err := next(ctx)
 	if err != nil {
 		return zero, err
 	}

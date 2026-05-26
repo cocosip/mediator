@@ -197,21 +197,21 @@ Add MediatR-style request pipeline behavior using Go generics and `context.Conte
 
 ### Checklist
 
-- [ ] Define request handler delegate type.
-- [ ] Define pipeline behavior interface.
-- [ ] Define pipeline behavior function adapter.
-- [ ] Implement pipeline behavior registration.
-- [ ] Compose registered behaviors during `Send`.
-- [ ] Preserve the existing request handler dispatch path when no behaviors are registered.
-- [ ] Add tests for behavior ordering.
-- [ ] Add tests for before/after behavior execution.
-- [ ] Add tests for behavior short-circuiting.
-- [ ] Add tests for behavior error wrapping.
-- [ ] Run existing Phase 2 tests to check for regressions.
-- [ ] Run formatting.
-- [ ] Run the full test suite.
-- [ ] Run race tests if concurrency-sensitive code changed.
-- [ ] Update this checklist with completed items.
+- [x] Define request handler delegate type.
+- [x] Define pipeline behavior interface.
+- [x] Define pipeline behavior function adapter.
+- [x] Implement pipeline behavior registration.
+- [x] Compose registered behaviors during `Send`.
+- [x] Preserve the existing request handler dispatch path when no behaviors are registered.
+- [x] Add tests for behavior ordering.
+- [x] Add tests for before/after behavior execution.
+- [x] Add tests for behavior short-circuiting.
+- [x] Add tests for behavior error wrapping.
+- [x] Run existing Phase 2 tests to check for regressions.
+- [x] Run formatting.
+- [x] Run the full test suite.
+- [x] Run race tests if concurrency-sensitive code changed.
+- [x] Update this checklist with completed items.
 
 ### Deliverables
 

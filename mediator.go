@@ -13,8 +13,9 @@ type Option func(*Mediator)
 
 // Mediator stores request and notification registrations.
 type Mediator struct {
-	requestMu       sync.RWMutex
-	requestHandlers map[typekey.Pair]requestExecutor
+	requestMu        sync.RWMutex
+	requestHandlers  map[typekey.Pair]requestExecutor
+	requestBehaviors map[typekey.Pair][]pipelineBehaviorExecutor
 
 	notificationMu        sync.RWMutex
 	notificationHandlers  map[reflect.Type][]notificationExecutor
@@ -37,6 +38,7 @@ type notificationPublisher interface {
 func New(options ...Option) *Mediator {
 	m := &Mediator{
 		requestHandlers:      make(map[typekey.Pair]requestExecutor),
+		requestBehaviors:     make(map[typekey.Pair][]pipelineBehaviorExecutor),
 		notificationHandlers: make(map[reflect.Type][]notificationExecutor),
 	}
 
