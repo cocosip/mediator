@@ -17,7 +17,7 @@ go get github.com/cocosip/mediator
 
 ## Quick Start
 
-### Request/response
+### Request/response with `RequestHandlerFunc`
 
 ```go
 package main
@@ -50,6 +50,54 @@ func main() {
 }
 ```
 
+`RequestHandlerFunc` is the most convenient option for small handlers and
+simple glue code.
+
+### Request/response with a handler type
+
+For non-trivial business logic, implement `RequestHandler` with your own type
+and keep dependencies on fields:
+
+```go
+type UserRepository interface {
+	Create(context.Context, string) (string, error)
+}
+
+type CreateUser struct {
+	Name string
+}
+
+type CreateUserResult struct {
+	ID string
+}
+
+type CreateUserHandler struct {
+	repo UserRepository
+}
+
+func (h *CreateUserHandler) Handle(
+	ctx context.Context,
+	request CreateUser,
+) (CreateUserResult, error) {
+	id, err := h.repo.Create(ctx, request.Name)
+	if err != nil {
+		return CreateUserResult{}, err
+	}
+
+	return CreateUserResult{ID: id}, nil
+}
+
+func registerHandler(m *mediator.Mediator, repo UserRepository) error {
+	return mediator.RegisterRequestHandler(
+		m,
+		&CreateUserHandler{repo: repo},
+	)
+}
+```
+
+`RegisterRequestHandler` already accepts the `RequestHandler` interface, so
+`RequestHandlerFunc` is only one implementation choice.
+
 ### Typed facades
 
 If you want business code to depend on a narrower capability instead of the
@@ -68,6 +116,20 @@ Available facades include:
 - `NotificationRegistration[TNotification]`
 - `BehaviorRegistration[TRequest, TResponse]`
 
+This is useful when a service should only depend on one mediator capability.
+For example, a component that only sends `Ping -> string` requests can depend
+on `Sender[Ping, string]` instead of depending on the full `*Mediator`.
+
+```go
+type PingService struct {
+	sender mediator.Sender[Ping, string]
+}
+
+func (s PingService) Execute(ctx context.Context, message string) (string, error) {
+	return s.sender.Send(ctx, Ping{Message: message})
+}
+```
+
 ### Notifications
 
 ```go
@@ -80,6 +142,9 @@ m := mediator.New(
 
 Register one or more notification handlers with `RegisterNotificationHandler`,
 then call `Publish`.
+
+If you want the same narrow-dependency style for notifications, use
+`NotificationPublisherOf[T]` to obtain a `Publisher[T]`.
 
 ### Pipeline behaviors
 
