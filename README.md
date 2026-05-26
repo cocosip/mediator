@@ -219,6 +219,82 @@ If you want the same narrow-dependency style for notifications, use
 Register request behaviors with `RegisterPipelineBehavior` to add logging,
 validation, retries, transactions, or error wrapping around handlers.
 
+#### Before / after behavior
+
+```go
+type CreateOrder struct {
+	ID string
+}
+
+type CreateOrderHandler struct{}
+
+func (h CreateOrderHandler) Handle(
+	ctx context.Context,
+	request CreateOrder,
+) (string, error) {
+	return "created:" + request.ID, nil
+}
+
+m := mediator.New()
+
+_ = mediator.RegisterRequestHandler(
+	m,
+	CreateOrderHandler{},
+)
+
+_ = mediator.RegisterPipelineBehavior(
+	m,
+	mediator.PipelineBehaviorFunc[CreateOrder, string](
+		func(
+			ctx context.Context,
+			request CreateOrder,
+			next mediator.RequestHandlerDelegate[string],
+		) (string, error) {
+			fmt.Println("before", request.ID)
+
+			response, err := next(ctx)
+			if err != nil {
+				return "", err
+			}
+
+			fmt.Println("after", request.ID)
+			return response, nil
+		},
+	),
+)
+
+response, _ := mediator.Send[CreateOrder, string](
+	context.Background(),
+	m,
+	CreateOrder{ID: "order-1"},
+)
+
+fmt.Println(response)
+```
+
+#### Validation short-circuit
+
+Behaviors can stop execution before the handler runs:
+
+```go
+_ = mediator.RegisterPipelineBehavior(
+	m,
+	mediator.PipelineBehaviorFunc[CreateOrder, string](
+		func(
+			ctx context.Context,
+			request CreateOrder,
+			next mediator.RequestHandlerDelegate[string],
+		) (string, error) {
+			if request.ID == "" {
+				return "", errors.New("order id is required")
+			}
+
+			return next(ctx)
+		},
+	),
+)
+```
+
 The original package-level APIs remain supported. The facade layer is an
 additional abstraction for callers that prefer depending on narrow interfaces.
 
