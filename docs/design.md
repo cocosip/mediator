@@ -57,7 +57,7 @@ type Mediator struct {
 func New(options ...Option) *Mediator
 ```
 
-`Mediator` owns handler registrations and execution options. It should be safe for concurrent calls to `Send` and `Publish`. Registration should also avoid map read/write panics, though applications are encouraged to finish registration during startup before serving traffic.
+`Mediator` owns handler registrations and execution options. It is safe for concurrent calls to `Send` and `Publish`, and registration APIs avoid map read/write panics. Applications are still encouraged to finish registration during startup before serving traffic so runtime behavior stays predictable.
 
 ### Request/Response
 
@@ -94,6 +94,7 @@ Rules:
 - Duplicate request handler registration returns `ErrDuplicateHandler`.
 - Missing request handler returns an error that satisfies `errors.Is(err, ErrHandlerNotFound)`.
 - Request messages do not need to implement `IRequest`-style marker interfaces.
+- Registrations match the exact generic type pair used at registration and dispatch time, so value and pointer request types are distinct.
 
 ### Notifications
 
@@ -130,6 +131,7 @@ Rules:
 - If no notification handler is registered, `Publish` returns nil.
 - By default, notification handlers run sequentially in registration order.
 - The default error behavior stops on the first handler error.
+- Registrations match the exact notification type used at registration and publish time, so value and pointer notification types are distinct.
 
 ### Pipeline Behaviors
 
@@ -224,9 +226,10 @@ const (
 Rules:
 
 - `StopOnFirstError` returns the first error.
-- `ContinueOnError` attempts all handlers and returns `errors.Join(...)` when multiple handlers fail.
+- `ContinueOnError` attempts all handlers and returns `errors.Join(...)` when one or more handlers fail.
 - `ParallelPublisher` should respect context cancellation and avoid goroutine leaks.
 - Publisher implementations should return context errors when cancellation prevents meaningful completion.
+- The default mediator publisher is `SequentialPublisher{ErrorStrategy: StopOnFirstError}`.
 
 ## Error Model
 
@@ -240,16 +243,19 @@ var (
 )
 ```
 
-Structured errors should wrap sentinels so callers can use `errors.Is` while still receiving useful details.
+Structured errors wrap sentinels so callers can use `errors.Is` while still receiving useful details.
 
 ```go
 type HandlerNotFoundError struct {
-    MessageType reflect.Type
+    RequestType  reflect.Type
+    ResponseType reflect.Type
 }
 
 func (e HandlerNotFoundError) Error() string
 func (e HandlerNotFoundError) Unwrap() error { return ErrHandlerNotFound }
 ```
+
+`DuplicateHandlerError` and `InvalidHandlerError` follow the same pattern and also unwrap to their sentinel errors.
 
 Go error handling replaces MediatR's exception-specific abstractions:
 
@@ -334,7 +340,24 @@ Implementation should hide this detail behind small internal helpers so the publ
 
 ## Development Phases
 
-### Phase 1: Core Message Dispatch
+### Phase 1: Project Scaffold
+
+Goal: establish the module, type keys, and public error model.
+
+Scope:
+
+- `go.mod`
+- `internal/typekey`
+- public sentinel and structured errors
+- basic unit tests for type keys and `errors.Is`
+
+Acceptance tests:
+
+- Type keys are stable for repeated generic lookups.
+- Request/response type pairs produce distinct registration keys.
+- Structured errors satisfy `errors.Is` for their sentinels.
+
+### Phase 2: Core Message Dispatch
 
 Goal: build a usable, dependency-free mediator core.
 
@@ -347,8 +370,7 @@ Scope:
 - `Publish[TNotification]`
 - `RegisterNotificationHandler`
 - `NotificationHandlerFunc`
-- default `SequentialPublisher`
-- public sentinel and structured errors
+- default sequential notification publishing
 - concurrent-safe registration and dispatch maps
 
 Acceptance tests:
@@ -360,7 +382,7 @@ Acceptance tests:
 - Notification with no handlers returns nil.
 - Sequential notification publishing stops on the first handler error.
 
-### Phase 2: Request Pipeline
+### Phase 3: Request Pipeline
 
 Goal: add request pipeline behaviors for cross-cutting concerns.
 
@@ -379,7 +401,7 @@ Acceptance tests:
 - A behavior can short-circuit without calling the handler.
 - A behavior can wrap a handler error.
 
-### Phase 3: Publisher Strategies
+### Phase 4: Publisher Strategies
 
 Goal: make notification publishing configurable.
 
@@ -402,7 +424,25 @@ Acceptance tests:
 - Stop strategy returns deterministically.
 - Context cancellation is returned and does not leak work.
 
-### Phase 4: Advanced Features and Integrations
+### Phase 5: Core Stabilization
+
+Goal: document and stabilize the first practical release of the core package.
+
+Scope:
+
+- package-level documentation
+- minimal usage examples
+- README / getting-started guidance
+- API review against implemented behavior
+- concurrency and pointer/value message documentation
+
+Acceptance tests:
+
+- Example tests cover request, notification, and pipeline behavior usage.
+- Public API names remain Go-like and consistent.
+- Documentation matches the implemented Phases 1-4 behavior.
+
+### Phase 6: Advanced Features and Integrations
 
 Goal: add advanced MediatR-inspired capabilities without bloating the core.
 

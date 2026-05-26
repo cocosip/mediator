@@ -307,22 +307,22 @@ Prepare the core package for first practical use.
 
 ### Checklist
 
-- [ ] Review public API names against Go conventions.
-- [ ] Review exported identifiers for required documentation comments.
-- [ ] Add package-level documentation.
-- [ ] Add minimal request/response usage example.
-- [ ] Add minimal notification usage example.
-- [ ] Add minimal pipeline behavior usage example.
-- [ ] Review error messages for clarity and stability.
-- [ ] Review pointer/value message type behavior and document it.
-- [ ] Review concurrency behavior and document registration-time expectations.
-- [ ] Check `docs/design.md` against implemented behavior.
-- [ ] Update `docs/design.md` for any approved behavior changes.
-- [ ] Add or update README/getting-started content if needed.
-- [ ] Run formatting.
-- [ ] Run the full test suite.
-- [ ] Run race tests.
-- [ ] Mark first usable release scope complete.
+- [x] Review public API names against Go conventions.
+- [x] Review exported identifiers for required documentation comments.
+- [x] Add package-level documentation.
+- [x] Add minimal request/response usage example.
+- [x] Add minimal notification usage example.
+- [x] Add minimal pipeline behavior usage example.
+- [x] Review error messages for clarity and stability.
+- [x] Review pointer/value message type behavior and document it.
+- [x] Review concurrency behavior and document registration-time expectations.
+- [x] Check `docs/design.md` against implemented behavior.
+- [x] Update `docs/design.md` for any approved behavior changes.
+- [x] Add or update README/getting-started content if needed.
+- [x] Run formatting.
+- [x] Run the full test suite.
+- [x] Run race tests.
+- [x] Mark first usable release scope complete.
 
 ### Deliverables
 

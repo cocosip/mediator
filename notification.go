@@ -13,7 +13,9 @@ import (
 type NotificationErrorStrategy int
 
 const (
+	// StopOnFirstError returns the first handler error and stops further execution.
 	StopOnFirstError NotificationErrorStrategy = iota
+	// ContinueOnError runs all handlers and aggregates failures with errors.Join.
 	ContinueOnError
 )
 
