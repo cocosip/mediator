@@ -18,20 +18,12 @@ type Mediator struct {
 	requestBehaviors map[typekey.Pair][]pipelineBehaviorExecutor
 
 	notificationMu        sync.RWMutex
-	notificationHandlers  map[reflect.Type][]notificationExecutor
-	notificationPublisher notificationPublisher
+	notificationHandlers  map[reflect.Type][]NotificationExecutor
+	notificationPublisher NotificationPublisher
 }
 
 type requestExecutor interface {
 	handle(context.Context, any) (any, error)
-}
-
-type notificationExecutor interface {
-	handle(context.Context, any) error
-}
-
-type notificationPublisher interface {
-	publish(context.Context, []notificationExecutor, any) error
 }
 
 // New creates a mediator with default registries and publisher.
@@ -39,7 +31,10 @@ func New(options ...Option) *Mediator {
 	m := &Mediator{
 		requestHandlers:      make(map[typekey.Pair]requestExecutor),
 		requestBehaviors:     make(map[typekey.Pair][]pipelineBehaviorExecutor),
-		notificationHandlers: make(map[reflect.Type][]notificationExecutor),
+		notificationHandlers: make(map[reflect.Type][]NotificationExecutor),
+		notificationPublisher: SequentialPublisher{
+			ErrorStrategy: StopOnFirstError,
+		},
 	}
 
 	for _, option := range options {

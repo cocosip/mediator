@@ -251,23 +251,23 @@ Make notification execution strategy configurable.
 
 ### Checklist
 
-- [ ] Define public notification publisher interface.
-- [ ] Define public notification executor abstraction.
-- [ ] Add option for replacing the notification publisher.
-- [ ] Add notification error strategy enum.
-- [ ] Update sequential publisher to support stop-on-first-error.
-- [ ] Update sequential publisher to support continue-on-error.
-- [ ] Add tests for custom publisher configuration.
-- [ ] Add tests for sequential continue-on-error aggregation.
-- [ ] Implement parallel publisher.
-- [ ] Add tests for parallel handler execution.
-- [ ] Add tests for parallel error aggregation.
-- [ ] Add tests for context cancellation behavior.
-- [ ] Review goroutine lifecycle for leaks.
-- [ ] Run formatting.
-- [ ] Run the full test suite.
-- [ ] Run race tests.
-- [ ] Update this checklist with completed items.
+- [x] Define public notification publisher interface.
+- [x] Define public notification executor abstraction.
+- [x] Add option for replacing the notification publisher.
+- [x] Add notification error strategy enum.
+- [x] Update sequential publisher to support stop-on-first-error.
+- [x] Update sequential publisher to support continue-on-error.
+- [x] Add tests for custom publisher configuration.
+- [x] Add tests for sequential continue-on-error aggregation.
+- [x] Implement parallel publisher.
+- [x] Add tests for parallel handler execution.
+- [x] Add tests for parallel error aggregation.
+- [x] Add tests for context cancellation behavior.
+- [x] Review goroutine lifecycle for leaks.
+- [x] Run formatting.
+- [x] Run the full test suite.
+- [x] Run race tests.
+- [x] Update this checklist with completed items.
 
 ### Deliverables
 
