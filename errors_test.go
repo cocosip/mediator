@@ -32,3 +32,15 @@ func TestDuplicateHandlerErrorSupportsErrorsIs(t *testing.T) {
 		t.Fatalf("expected errors.Is(%T, ErrDuplicateHandler) to be true", err)
 	}
 }
+
+func TestInvalidHandlerErrorSupportsErrorsIs(t *testing.T) {
+	err := mediator.InvalidHandlerError{
+		Kind:         "request",
+		MessageType:  typekey.Of[missingRequest](),
+		ResponseType: typekey.Of[missingResponse](),
+	}
+
+	if !errors.Is(err, mediator.ErrInvalidHandler) {
+		t.Fatalf("expected errors.Is(%T, ErrInvalidHandler) to be true", err)
+	}
+}

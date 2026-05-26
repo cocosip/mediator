@@ -48,10 +48,46 @@ func (e DuplicateHandlerError) Unwrap() error {
 	return ErrDuplicateHandler
 }
 
+// InvalidHandlerError reports an invalid registration input.
+type InvalidHandlerError struct {
+	Kind         string
+	MessageType  reflect.Type
+	ResponseType reflect.Type
+}
+
+func (e InvalidHandlerError) Error() string {
+	if e.ResponseType != nil {
+		return fmt.Sprintf(
+			"mediator: invalid %s handler for request %s -> %s",
+			emptyOr(e.Kind, "request"),
+			typeString(e.MessageType),
+			typeString(e.ResponseType),
+		)
+	}
+
+	return fmt.Sprintf(
+		"mediator: invalid %s handler for notification %s",
+		emptyOr(e.Kind, "notification"),
+		typeString(e.MessageType),
+	)
+}
+
+func (e InvalidHandlerError) Unwrap() error {
+	return ErrInvalidHandler
+}
+
 func typeString(t reflect.Type) string {
 	if t == nil {
 		return "<nil>"
 	}
 
 	return t.String()
+}
+
+func emptyOr(value string, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+
+	return value
 }

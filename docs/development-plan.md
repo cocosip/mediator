@@ -128,25 +128,25 @@ Implement the first usable mediator core.
 
 ### Checklist
 
-- [ ] Define `Mediator`, constructor, options shell, and internal registries.
-- [ ] Add concurrency protection for registry reads and writes.
-- [ ] Define request handler interface and function adapter.
-- [ ] Implement request handler registration.
-- [ ] Implement type-safe request dispatch with `Send`.
-- [ ] Add tests for successful request dispatch.
-- [ ] Add tests for missing request handlers.
-- [ ] Add tests for duplicate request registrations.
-- [ ] Define notification handler interface and function adapter.
-- [ ] Implement notification handler registration.
-- [ ] Implement type-safe notification publishing with `Publish`.
-- [ ] Implement default sequential notification publisher.
-- [ ] Add tests for ordered notification handler execution.
-- [ ] Add tests for notifications with no handlers.
-- [ ] Add tests for stop-on-first-error notification behavior.
-- [ ] Run formatting.
-- [ ] Run the full test suite.
-- [ ] Run race tests if supported locally.
-- [ ] Update this checklist with completed items.
+- [x] Define `Mediator`, constructor, options shell, and internal registries.
+- [x] Add concurrency protection for registry reads and writes.
+- [x] Define request handler interface and function adapter.
+- [x] Implement request handler registration.
+- [x] Implement type-safe request dispatch with `Send`.
+- [x] Add tests for successful request dispatch.
+- [x] Add tests for missing request handlers.
+- [x] Add tests for duplicate request registrations.
+- [x] Define notification handler interface and function adapter.
+- [x] Implement notification handler registration.
+- [x] Implement type-safe notification publishing with `Publish`.
+- [x] Implement default sequential notification publisher.
+- [x] Add tests for ordered notification handler execution.
+- [x] Add tests for notifications with no handlers.
+- [x] Add tests for stop-on-first-error notification behavior.
+- [x] Run formatting.
+- [x] Run the full test suite.
+- [x] Run race tests if supported locally.
+- [x] Update this checklist with completed items.
 
 ### Deliverables
 
