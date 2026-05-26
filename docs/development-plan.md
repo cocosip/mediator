@@ -83,17 +83,17 @@ Create the minimal Go module and internal foundations required by the mediator c
 
 ### Checklist
 
-- [ ] Confirm the final module path.
-- [ ] Confirm the minimum supported Go version.
-- [ ] Create the Go module.
-- [ ] Create the internal type-key helper.
-- [ ] Add tests for stable generic type keys.
-- [ ] Add public sentinel errors.
-- [ ] Add structured errors for missing and duplicate handlers.
-- [ ] Add tests for `errors.Is` compatibility.
-- [ ] Run formatting.
-- [ ] Run the full test suite.
-- [ ] Update this checklist with completed items.
+- [x] Confirm the final module path.
+- [x] Confirm the minimum supported Go version.
+- [x] Create the Go module.
+- [x] Create the internal type-key helper.
+- [x] Add tests for stable generic type keys.
+- [x] Add public sentinel errors.
+- [x] Add structured errors for missing and duplicate handlers.
+- [x] Add tests for `errors.Is` compatibility.
+- [x] Run formatting.
+- [x] Run the full test suite.
+- [x] Update this checklist with completed items.
 
 ### Deliverables
 
