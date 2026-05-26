@@ -45,7 +45,13 @@ The core package must not depend on these integration packages.
 
 ## Core API
 
-Go does not support generic methods, so type-safe operations are package-level generic functions that receive a `*Mediator`.
+Go does not support generic methods, so the primary type-safe operations are
+package-level generic functions that receive a `*Mediator`.
+
+To reduce direct coupling to the full mediator implementation, the package also
+provides typed facade interfaces and adapter functions. This keeps the
+package-level generic entry points for strong typing while still letting
+application code depend on narrower capabilities.
 
 ### Mediator
 
@@ -58,6 +64,40 @@ func New(options ...Option) *Mediator
 ```
 
 `Mediator` owns handler registrations and execution options. It is safe for concurrent calls to `Send` and `Publish`, and registration APIs avoid map read/write panics. Applications are still encouraged to finish registration during startup before serving traffic so runtime behavior stays predictable.
+
+Typed facade adapters project a `*Mediator` into narrower capabilities:
+
+```go
+type Sender[TRequest any, TResponse any] interface {
+    Send(context.Context, TRequest) (TResponse, error)
+}
+
+type Publisher[TNotification any] interface {
+    Publish(context.Context, TNotification) error
+}
+
+type RequestRegistrar[TRequest any, TResponse any] interface {
+    Register(RequestHandler[TRequest, TResponse]) error
+}
+
+type NotificationRegistrar[TNotification any] interface {
+    Register(NotificationHandler[TNotification]) error
+}
+
+type BehaviorRegistrar[TRequest any, TResponse any] interface {
+    Register(PipelineBehavior[TRequest, TResponse]) error
+}
+```
+
+Adapter functions expose these typed capabilities:
+
+```go
+func RequestSender[TRequest any, TResponse any](m *Mediator) Sender[TRequest, TResponse]
+func NotificationPublisherOf[TNotification any](m *Mediator) Publisher[TNotification]
+func RequestRegistration[TRequest any, TResponse any](m *Mediator) RequestRegistrar[TRequest, TResponse]
+func NotificationRegistration[TNotification any](m *Mediator) NotificationRegistrar[TNotification]
+func BehaviorRegistration[TRequest any, TResponse any](m *Mediator) BehaviorRegistrar[TRequest, TResponse]
+```
 
 ### Request/Response
 

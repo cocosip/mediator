@@ -7,6 +7,7 @@ It provides:
 - type-safe request/response dispatch with `Send`
 - notification publishing with configurable execution strategies
 - request pipeline behaviors for cross-cutting concerns
+- typed facade interfaces for narrower dependencies on mediator capabilities
 
 ## Install
 
@@ -49,6 +50,24 @@ func main() {
 }
 ```
 
+### Typed facades
+
+If you want business code to depend on a narrower capability instead of the
+full `*Mediator`, project it into a typed facade:
+
+```go
+sender := mediator.RequestSender[Ping, string](m)
+response, _ := sender.Send(context.Background(), Ping{Message: "hello"})
+```
+
+Available facades include:
+
+- `RequestSender[TRequest, TResponse]`
+- `NotificationPublisherOf[TNotification]`
+- `RequestRegistration[TRequest, TResponse]`
+- `NotificationRegistration[TNotification]`
+- `BehaviorRegistration[TRequest, TResponse]`
+
 ### Notifications
 
 ```go
@@ -66,6 +85,9 @@ then call `Publish`.
 
 Register request behaviors with `RegisterPipelineBehavior` to add logging,
 validation, retries, transactions, or error wrapping around handlers.
+
+The original package-level APIs remain supported. The facade layer is an
+additional abstraction for callers that prefer depending on narrow interfaces.
 
 ## Concurrency
 
