@@ -28,6 +28,7 @@ mediator/
   request.go           // request handlers and request execution
   notification.go      // notification handlers and publisher strategies
   behavior.go          // request pipeline behavior types and composition
+  stream.go            // callback-based stream request handlers
   errors.go            // public sentinel and structured errors
   internal/typekey/    // reflect.Type based keys for generic registrations
 ```
@@ -301,9 +302,9 @@ Go error handling replaces MediatR's exception-specific abstractions:
 
 - Error wrapping, retry, fallback, and logging should usually be implemented as pipeline behaviors.
 - Panic recovery should not happen by default.
-- A future `RecoverBehavior` helper can convert panics to errors when applications explicitly register it.
+- `RecoverBehavior` can convert panics to errors when applications explicitly register it.
 
-Possible future helper:
+Recover helper:
 
 ```go
 func RecoverBehavior[TRequest any, TResponse any](
@@ -311,15 +312,41 @@ func RecoverBehavior[TRequest any, TResponse any](
 ) PipelineBehavior[TRequest, TResponse]
 ```
 
+Rules:
+
+- Panics are propagated by default.
+- Registered recover behavior only recovers panics from later pipeline steps.
+- The callback receives the context, request, and recovered value.
+- The callback error becomes the `Send` error.
+- If the callback returns nil, `RecoverBehavior` returns a fallback recovered-panic error.
+- Non-panic handler errors pass through unchanged.
+
 ## Stream Requests
 
-Stream support should be designed now but implemented after the core request and notification paths are stable.
+Stream support uses a callback API rather than channels or Go 1.23 iterator
+syntax. This keeps the minimum Go version at 1.22 and avoids hidden goroutine
+lifetime and error-channel cleanup rules.
 
-Possible API:
+API:
 
 ```go
+type StreamYield[TItem any] func(context.Context, TItem) error
+
 type StreamHandler[TRequest any, TItem any] interface {
-    Handle(context.Context, TRequest) (<-chan TItem, <-chan error)
+    Handle(context.Context, TRequest, StreamYield[TItem]) error
+}
+
+type StreamHandlerFunc[TRequest any, TItem any] func(
+    context.Context,
+    TRequest,
+    StreamYield[TItem],
+) error
+
+func (f StreamHandlerFunc[TRequest, TItem]) Handle(
+    ctx context.Context,
+    request TRequest,
+    yield StreamYield[TItem],
+) error
 }
 
 func RegisterStreamHandler[TRequest any, TItem any](
@@ -331,16 +358,27 @@ func Stream[TRequest any, TItem any](
     ctx context.Context,
     m *Mediator,
     request TRequest,
-) (<-chan TItem, <-chan error)
+    yield StreamYield[TItem],
+) error
 ```
 
-The exact stream API should be validated during the stream phase. A callback or iterator-style API may be preferable if channel-based errors become awkward. The stream design must clearly define cancellation, handler cleanup, backpressure, and error propagation before implementation.
+Rules:
+
+- One request type and item type pair has exactly one stream handler.
+- Duplicate stream handler registration returns `ErrDuplicateHandler`.
+- Missing stream handler registration returns an error matching `ErrHandlerNotFound`.
+- The handler calls `yield(ctx, item)` for each item.
+- `Stream` returns the handler error or the first yield error.
+- Context cancellation is checked before dispatch and after each yielded item.
+- Backpressure is synchronous: the handler does not continue until `yield` returns.
+- Handler cleanup is deterministic because the stream call returns only after the handler returns.
+- Stream pipeline behaviors are not implemented in this phase; request pipeline behaviors apply only to `Send`.
 
 ## Pre/Post Processors
 
 MediatR exposes pre-processors and post-processors as distinct pipeline components. In Go, these should be helpers built on top of `PipelineBehavior`, not a separate primary mechanism.
 
-Possible helpers:
+Helpers:
 
 ```go
 func PreProcessor[TRequest any, TResponse any](
@@ -352,7 +390,56 @@ func PostProcessor[TRequest any, TResponse any](
 ) PipelineBehavior[TRequest, TResponse]
 ```
 
-This keeps the core mental model small: request execution has handlers and behaviors.
+Rules:
+
+- Pre-processors run before the next pipeline step.
+- A pre-processor error short-circuits execution and prevents the handler from running.
+- Post-processors run only after successful handler execution.
+- A post-processor error becomes the `Send` error.
+- Ordering remains the normal behavior ordering: first registered behavior is outermost.
+- This keeps the core mental model small: request execution has handlers and behaviors.
+
+## Registry Package
+
+The optional `registry` package groups explicit registrations without adding
+reflection scanning or DI dependencies.
+
+```go
+type Registry struct {
+    // internal registration callbacks
+}
+
+func New() *Registry
+
+func AddRequestHandler[TRequest any, TResponse any](
+    r *Registry,
+    handler mediator.RequestHandler[TRequest, TResponse],
+)
+
+func AddNotificationHandler[TNotification any](
+    r *Registry,
+    handler mediator.NotificationHandler[TNotification],
+)
+
+func AddPipelineBehavior[TRequest any, TResponse any](
+    r *Registry,
+    behavior mediator.PipelineBehavior[TRequest, TResponse],
+)
+
+func AddStreamHandler[TRequest any, TItem any](
+    r *Registry,
+    handler mediator.StreamHandler[TRequest, TItem],
+)
+
+func (r *Registry) Apply(m *mediator.Mediator) error
+```
+
+Rules:
+
+- The package depends only on the public mediator API.
+- Registrations run in the order they were added.
+- The first registration error is returned unchanged.
+- No automatic scanning or hidden dependency resolution is performed.
 
 ## Type Keys
 
@@ -374,6 +461,12 @@ Pipeline behavior key:
 
 ```text
 (TRequest, TResponse)
+```
+
+Stream handler key:
+
+```text
+(TRequest, TItem)
 ```
 
 Implementation should hide this detail behind small internal helpers so the public API stays generic and simple.
@@ -489,7 +582,6 @@ Goal: add advanced MediatR-inspired capabilities without bloating the core.
 Scope:
 
 - stream request API and implementation
-- stream pipeline behavior, if the final stream model supports it cleanly
 - `RecoverBehavior`
 - pre/post processor helpers
 - optional `registry` package for batch registration
@@ -501,7 +593,8 @@ Acceptance tests:
 - Stream errors are observable by callers.
 - Recover behavior converts registered request panics into errors.
 - Pre/post helpers preserve the same behavior ordering rules.
-- Integration packages depend only on the public core API.
+- Registry depends only on the public core API.
+- Integration packages depend only on the public core API if a DI target is selected later.
 
 ## References
 

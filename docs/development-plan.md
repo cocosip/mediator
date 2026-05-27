@@ -360,12 +360,12 @@ Purpose:
 
 Checklist:
 
-- [ ] Confirm recover behavior API shape.
-- [ ] Document panic handling semantics.
-- [ ] Implement recover behavior helper.
-- [ ] Add tests proving panic is not swallowed by default.
-- [ ] Add tests proving registered recover behavior converts panic to error.
-- [ ] Run the full test suite.
+- [x] Confirm recover behavior API shape.
+- [x] Document panic handling semantics.
+- [x] Implement recover behavior helper.
+- [x] Add tests proving panic is not swallowed by default.
+- [x] Add tests proving registered recover behavior converts panic to error.
+- [x] Run the full test suite.
 
 Acceptance criteria:
 
@@ -381,14 +381,14 @@ Purpose:
 
 Checklist:
 
-- [ ] Confirm helper API shape.
-- [ ] Implement pre-processor helper on top of pipeline behavior.
-- [ ] Implement post-processor helper on top of pipeline behavior.
-- [ ] Add tests for pre-processor success path.
-- [ ] Add tests for pre-processor error short-circuit.
-- [ ] Add tests for post-processor success path.
-- [ ] Add tests for post-processor error behavior.
-- [ ] Run the full test suite.
+- [x] Confirm helper API shape.
+- [x] Implement pre-processor helper on top of pipeline behavior.
+- [x] Implement post-processor helper on top of pipeline behavior.
+- [x] Add tests for pre-processor success path.
+- [x] Add tests for pre-processor error short-circuit.
+- [x] Add tests for post-processor success path.
+- [x] Add tests for post-processor error behavior.
+- [x] Run the full test suite.
 
 Acceptance criteria:
 
@@ -405,24 +405,24 @@ Purpose:
 
 Checklist:
 
-- [ ] Compare channel, callback, and iterator-style stream APIs.
-- [ ] Select the stream API shape.
-- [ ] Update `docs/design.md` with final stream semantics.
-- [ ] Define stream handler registration behavior.
-- [ ] Define stream dispatch behavior.
-- [ ] Define stream cancellation behavior.
-- [ ] Define stream error propagation behavior.
-- [ ] Implement stream handler registration.
-- [ ] Implement stream dispatch.
-- [ ] Add tests for incremental item consumption.
-- [ ] Add tests for stream errors.
-- [ ] Add tests for context cancellation.
-- [ ] Run the full test suite.
-- [ ] Run race tests.
+- [x] Compare channel, callback, and iterator-style stream APIs.
+- [x] Select the stream API shape.
+- [x] Update `docs/design.md` with final stream semantics.
+- [x] Define stream handler registration behavior.
+- [x] Define stream dispatch behavior.
+- [x] Define stream cancellation behavior.
+- [x] Define stream error propagation behavior.
+- [x] Implement stream handler registration.
+- [x] Implement stream dispatch.
+- [x] Add tests for incremental item consumption.
+- [x] Add tests for stream errors.
+- [x] Add tests for context cancellation.
+- [x] Run the full test suite.
+- [x] Run race tests.
 
 Open design decision:
 
-- Channel API, callback API, or iterator-style API.
+- Resolved: use a callback API. Channel APIs complicate error propagation and cleanup, and iterator-style APIs would require raising the minimum Go version beyond 1.22.
 
 Before implementation, update `docs/design.md` with:
 
@@ -447,13 +447,13 @@ Purpose:
 
 Checklist:
 
-- [ ] Confirm registry package is needed after core usage.
-- [ ] Define registry API shape.
-- [ ] Implement registration grouping.
-- [ ] Add tests for successful grouped registration.
-- [ ] Add tests for error propagation during grouped registration.
-- [ ] Document registry package usage.
-- [ ] Run the full test suite.
+- [x] Confirm registry package is needed after core usage.
+- [x] Define registry API shape.
+- [x] Implement registration grouping.
+- [x] Add tests for successful grouped registration.
+- [x] Add tests for error propagation during grouped registration.
+- [x] Document registry package usage.
+- [x] Run the full test suite.
 
 Acceptance criteria:
 
@@ -508,6 +508,17 @@ Excludes:
 ### Advanced Release
 
 Includes selected Phase 6 capabilities after API review and usage feedback.
+
+Implemented in this increment:
+
+- Recover behavior helper.
+- Pre/post processor helpers.
+- Callback-based stream requests.
+- Optional `registry` package.
+
+Deferred:
+
+- DI integration packages remain unimplemented until a real integration target is selected.
 
 ## Risks and Mitigations
 
@@ -575,7 +586,7 @@ Mitigation:
 - Is Go 1.22 an acceptable minimum version?
 - Should request handler keys include both request and response type, or should a request type map to exactly one response type? The current design uses both types.
 - Should parallel stop-on-first-error cancel sibling handlers with a derived context, or only return the first observed error after started handlers complete?
-- Which stream API shape best fits the intended users?
+- Which stream API shape best fits the intended users? Resolved for this increment: callback API.
 - Which DI integration, if any, is actually needed first?
 
 ## Definition of Done

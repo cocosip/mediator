@@ -16,6 +16,7 @@ type Mediator struct {
 	requestMu        sync.RWMutex
 	requestHandlers  map[typekey.Pair]requestExecutor
 	requestBehaviors map[typekey.Pair][]pipelineBehaviorExecutor
+	streamHandlers   map[typekey.Pair]streamExecutor
 
 	notificationMu        sync.RWMutex
 	notificationHandlers  map[reflect.Type][]NotificationExecutor
@@ -31,6 +32,7 @@ func New(options ...Option) *Mediator {
 	m := &Mediator{
 		requestHandlers:      make(map[typekey.Pair]requestExecutor),
 		requestBehaviors:     make(map[typekey.Pair][]pipelineBehaviorExecutor),
+		streamHandlers:       make(map[typekey.Pair]streamExecutor),
 		notificationHandlers: make(map[reflect.Type][]NotificationExecutor),
 		notificationPublisher: SequentialPublisher{
 			ErrorStrategy: StopOnFirstError,

@@ -2,6 +2,7 @@ package mediator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cocosip/mediator/internal/typekey"
 )
@@ -75,4 +76,87 @@ func RegisterPipelineBehavior[TRequest any, TResponse any](m *Mediator, behavior
 	)
 
 	return nil
+}
+
+// RecoverBehavior converts panics from later pipeline steps into callback errors.
+func RecoverBehavior[TRequest any, TResponse any](
+	onPanic func(context.Context, TRequest, any) error,
+) PipelineBehavior[TRequest, TResponse] {
+	return PipelineBehaviorFunc[TRequest, TResponse](
+		func(
+			ctx context.Context,
+			request TRequest,
+			next RequestHandlerDelegate[TResponse],
+		) (response TResponse, err error) {
+			defer func() {
+				recovered := recover()
+				if recovered == nil {
+					return
+				}
+
+				if onPanic == nil {
+					panic(recovered)
+				}
+
+				var zero TResponse
+				response = zero
+				err = onPanic(ctx, request, recovered)
+				if err == nil {
+					err = fmt.Errorf("mediator: recovered panic: %v", recovered)
+				}
+			}()
+
+			return next(ctx)
+		},
+	)
+}
+
+// PreProcessor creates a behavior that runs before the next pipeline step.
+func PreProcessor[TRequest any, TResponse any](
+	fn func(context.Context, TRequest) error,
+) PipelineBehavior[TRequest, TResponse] {
+	return PipelineBehaviorFunc[TRequest, TResponse](
+		func(
+			ctx context.Context,
+			request TRequest,
+			next RequestHandlerDelegate[TResponse],
+		) (TResponse, error) {
+			if fn != nil {
+				if err := fn(ctx, request); err != nil {
+					var zero TResponse
+					return zero, err
+				}
+			}
+
+			return next(ctx)
+		},
+	)
+}
+
+// PostProcessor creates a behavior that runs after successful request handling.
+func PostProcessor[TRequest any, TResponse any](
+	fn func(context.Context, TRequest, TResponse) error,
+) PipelineBehavior[TRequest, TResponse] {
+	return PipelineBehaviorFunc[TRequest, TResponse](
+		func(
+			ctx context.Context,
+			request TRequest,
+			next RequestHandlerDelegate[TResponse],
+		) (TResponse, error) {
+			response, err := next(ctx)
+			if err != nil {
+				var zero TResponse
+				return zero, err
+			}
+
+			if fn != nil {
+				if err := fn(ctx, request, response); err != nil {
+					var zero TResponse
+					return zero, err
+				}
+			}
+
+			return response, nil
+		},
+	)
 }

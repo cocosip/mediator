@@ -7,6 +7,7 @@ It provides:
 - type-safe request/response dispatch with `Send`
 - notification publishing with configurable execution strategies
 - request pipeline behaviors for cross-cutting concerns
+- callback-based stream request dispatch
 - typed facade interfaces for narrower dependencies on mediator capabilities
 
 ## Install
@@ -297,6 +298,102 @@ _ = mediator.RegisterPipelineBehavior(
 
 The original package-level APIs remain supported. The facade layer is an
 additional abstraction for callers that prefer depending on narrow interfaces.
+
+### Advanced request helpers
+
+`RecoverBehavior` is opt-in. Without it, handler panics propagate normally.
+
+```go
+_ = mediator.RegisterPipelineBehavior(
+	m,
+	mediator.RecoverBehavior[CreateOrder, string](
+		func(ctx context.Context, request CreateOrder, recovered any) error {
+			return fmt.Errorf("create order failed: %v", recovered)
+		},
+	),
+)
+```
+
+Pre/post helpers are ordinary pipeline behaviors:
+
+```go
+_ = mediator.RegisterPipelineBehavior(
+	m,
+	mediator.PreProcessor[CreateOrder, string](
+		func(ctx context.Context, request CreateOrder) error {
+			if request.ID == "" {
+				return errors.New("order id is required")
+			}
+
+			return nil
+		},
+	),
+)
+```
+
+Use `PostProcessor` when work should run only after successful handler
+execution.
+
+### Stream requests
+
+Stream handlers use a callback API. The handler yields one item at a time, and
+`Stream` returns the first handler, yield, or context error.
+
+```go
+type ListOrders struct {
+	UserID string
+}
+
+_ = mediator.RegisterStreamHandler(
+	m,
+	mediator.StreamHandlerFunc[ListOrders, string](
+		func(ctx context.Context, request ListOrders, yield mediator.StreamYield[string]) error {
+			for _, id := range []string{"order-1", "order-2"} {
+				if err := yield(ctx, id); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+	),
+)
+
+err := mediator.Stream(
+	context.Background(),
+	m,
+	ListOrders{UserID: "user-1"},
+	func(ctx context.Context, orderID string) error {
+		fmt.Println(orderID)
+		return nil
+	},
+)
+```
+
+This shape gives synchronous backpressure: the handler does not continue until
+the callback returns.
+
+### Grouped registrations
+
+The optional `registry` package groups explicit registrations without scanning
+or DI dependencies:
+
+```go
+r := registry.New()
+
+registry.AddRequestHandler(
+	r,
+	mediator.RequestHandlerFunc[Ping, string](
+		func(ctx context.Context, request Ping) (string, error) {
+			return "pong:" + request.Message, nil
+		},
+	),
+)
+
+if err := r.Apply(m); err != nil {
+	return err
+}
+```
 
 ## Concurrency
 

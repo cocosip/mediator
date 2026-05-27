@@ -5,6 +5,7 @@
 //   - RegisterRequestHandler and Send for request/response flows
 //   - RegisterNotificationHandler and Publish for notifications
 //   - RegisterPipelineBehavior for request pipeline composition
+//   - RegisterStreamHandler and Stream for callback-based streaming
 //
 // Registrations are safe against concurrent map access, but applications should
 // generally complete registration during startup before calling Send or Publish
