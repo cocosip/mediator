@@ -8,6 +8,6 @@
 //   - RegisterStreamHandler and Stream for callback-based streaming
 //
 // Registrations are safe against concurrent map access, but applications should
-// generally complete registration during startup before calling Send or Publish
-// from serving goroutines.
+// generally complete registration during startup before calling Send, Publish,
+// or Stream from serving goroutines.
 package mediator

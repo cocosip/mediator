@@ -334,6 +334,18 @@ _ = mediator.RegisterPipelineBehavior(
 Use `PostProcessor` when work should run only after successful handler
 execution.
 
+```go
+_ = mediator.RegisterPipelineBehavior(
+	m,
+	mediator.PostProcessor[CreateOrder, string](
+		func(ctx context.Context, request CreateOrder, response string) error {
+			fmt.Println("created", request.ID, response)
+			return nil
+		},
+	),
+)
+```
+
 ### Stream requests
 
 Stream handlers use a callback API. The handler yields one item at a time, and
@@ -379,6 +391,8 @@ The optional `registry` package groups explicit registrations without scanning
 or DI dependencies:
 
 ```go
+import "github.com/cocosip/mediator/registry"
+
 r := registry.New()
 
 registry.AddRequestHandler(

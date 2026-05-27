@@ -2,6 +2,7 @@ package mediator_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -120,4 +121,163 @@ func ExampleRegisterPipelineBehavior() {
 	// before
 	// after
 	// wrapped:hello
+}
+
+func ExampleRecoverBehavior() {
+	m := mediator.New()
+
+	err := mediator.RegisterRequestHandler(
+		m,
+		mediator.RequestHandlerFunc[pingRequest, string](
+			func(ctx context.Context, request pingRequest) (string, error) {
+				panic("service unavailable")
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = mediator.RegisterPipelineBehavior(
+		m,
+		mediator.RecoverBehavior[pingRequest, string](
+			func(ctx context.Context, request pingRequest, recovered any) error {
+				return fmt.Errorf("ping failed: %v", recovered)
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = mediator.Send[pingRequest, string](
+		context.Background(),
+		m,
+		pingRequest{Message: "hello"},
+	)
+	fmt.Println(err)
+	// Output:
+	// ping failed: service unavailable
+}
+
+func ExamplePreProcessor() {
+	m := mediator.New()
+
+	err := mediator.RegisterRequestHandler(
+		m,
+		mediator.RequestHandlerFunc[pingRequest, string](
+			func(ctx context.Context, request pingRequest) (string, error) {
+				return "pong:" + request.Message, nil
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = mediator.RegisterPipelineBehavior(
+		m,
+		mediator.PreProcessor[pingRequest, string](
+			func(ctx context.Context, request pingRequest) error {
+				if request.Message == "" {
+					return errors.New("message is required")
+				}
+
+				return nil
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = mediator.Send[pingRequest, string](
+		context.Background(),
+		m,
+		pingRequest{},
+	)
+	fmt.Println(err)
+	// Output:
+	// message is required
+}
+
+func ExamplePostProcessor() {
+	m := mediator.New()
+
+	err := mediator.RegisterRequestHandler(
+		m,
+		mediator.RequestHandlerFunc[pingRequest, string](
+			func(ctx context.Context, request pingRequest) (string, error) {
+				return "pong:" + request.Message, nil
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = mediator.RegisterPipelineBehavior(
+		m,
+		mediator.PostProcessor[pingRequest, string](
+			func(ctx context.Context, request pingRequest, response string) error {
+				fmt.Println("handled", request.Message, "as", response)
+				return nil
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	response, err := mediator.Send[pingRequest, string](
+		context.Background(),
+		m,
+		pingRequest{Message: "hello"},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(response)
+	// Output:
+	// handled hello as pong:hello
+	// pong:hello
+}
+
+func ExampleStream() {
+	m := mediator.New()
+
+	err := mediator.RegisterStreamHandler(
+		m,
+		mediator.StreamHandlerFunc[pingRequest, string](
+			func(ctx context.Context, request pingRequest, yield mediator.StreamYield[string]) error {
+				for _, suffix := range []string{"one", "two"} {
+					if err := yield(ctx, request.Message+":"+suffix); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			},
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = mediator.Stream(
+		context.Background(),
+		m,
+		pingRequest{Message: "item"},
+		func(ctx context.Context, item string) error {
+			fmt.Println(item)
+			return nil
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Output:
+	// item:one
+	// item:two
 }

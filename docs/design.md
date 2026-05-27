@@ -571,9 +571,9 @@ Scope:
 
 Acceptance tests:
 
-- Example tests cover request, notification, and pipeline behavior usage.
+- Example tests cover request, notification, pipeline behavior, recover, pre/post, and stream usage.
 - Public API names remain Go-like and consistent.
-- Documentation matches the implemented Phases 1-4 behavior.
+- Documentation matches the implemented Phases 1-6 behavior.
 
 ### Phase 6: Advanced Features and Integrations
 
