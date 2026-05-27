@@ -189,10 +189,7 @@ func Publish[TNotification any](ctx context.Context, m *Mediator, notification T
 
 	m.notificationMu.RLock()
 	registered := m.notificationHandlers[key]
-	handlers := make([]NotificationExecutor, 0, len(registered))
-	for _, handler := range registered {
-		handlers = append(handlers, handler)
-	}
+	handlers := append([]NotificationExecutor(nil), registered...)
 	publisher := m.notificationPublisher
 	m.notificationMu.RUnlock()
 

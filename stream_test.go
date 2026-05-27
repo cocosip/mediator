@@ -35,8 +35,8 @@ func TestStreamDispatchesRegisteredHandlerIncrementally(t *testing.T) {
 	err = mediator.Stream(
 		context.Background(),
 		m,
-		streamRequest{Values: []string{"first", "second", "third"}},
-		func(ctx context.Context, item string) error {
+		streamRequest{Values: []string{testFirst, testSecond, "third"}},
+		func(_ context.Context, item string) error {
 			items = append(items, item)
 			return nil
 		},
@@ -45,7 +45,7 @@ func TestStreamDispatchesRegisteredHandlerIncrementally(t *testing.T) {
 		t.Fatalf("expected stream to succeed, got %v", err)
 	}
 
-	expected := []string{"first", "second", "third"}
+	expected := []string{testFirst, testSecond, "third"}
 	if !reflect.DeepEqual(items, expected) {
 		t.Fatalf("expected items %v, got %v", expected, items)
 	}
@@ -56,8 +56,8 @@ func TestStreamReturnsHandlerErrors(t *testing.T) {
 	streamErr := errors.New("stream failed")
 
 	err := mediator.RegisterStreamHandler(m, mediator.StreamHandlerFunc[streamRequest, string](
-		func(ctx context.Context, request streamRequest, yield mediator.StreamYield[string]) error {
-			if err := yield(ctx, "first"); err != nil {
+		func(ctx context.Context, _ streamRequest, yield mediator.StreamYield[string]) error {
+			if err := yield(ctx, testFirst); err != nil {
 				return err
 			}
 
@@ -72,8 +72,8 @@ func TestStreamReturnsHandlerErrors(t *testing.T) {
 	err = mediator.Stream(
 		context.Background(),
 		m,
-		streamRequest{Values: []string{"first"}},
-		func(ctx context.Context, item string) error {
+		streamRequest{Values: []string{testFirst}},
+		func(_ context.Context, item string) error {
 			items = append(items, item)
 			return nil
 		},
@@ -86,7 +86,7 @@ func TestStreamReturnsHandlerErrors(t *testing.T) {
 		t.Fatalf("expected stream error, got %v", err)
 	}
 
-	expected := []string{"first"}
+	expected := []string{testFirst}
 	if !reflect.DeepEqual(items, expected) {
 		t.Fatalf("expected items %v, got %v", expected, items)
 	}
@@ -117,8 +117,8 @@ func TestStreamReturnsContextCancellationFromYield(t *testing.T) {
 	err = mediator.Stream(
 		ctx,
 		m,
-		streamRequest{Values: []string{"first", "second"}},
-		func(ctx context.Context, item string) error {
+		streamRequest{Values: []string{testFirst, testSecond}},
+		func(_ context.Context, item string) error {
 			items = append(items, item)
 			cancel()
 			return nil
@@ -132,7 +132,7 @@ func TestStreamReturnsContextCancellationFromYield(t *testing.T) {
 		t.Fatalf("expected context.Canceled, got %v", err)
 	}
 
-	expected := []string{"first"}
+	expected := []string{testFirst}
 	if !reflect.DeepEqual(items, expected) {
 		t.Fatalf("expected cancellation after items %v, got %v", expected, items)
 	}
@@ -144,8 +144,8 @@ func TestStreamReturnsHandlerNotFoundForMissingHandler(t *testing.T) {
 	err := mediator.Stream(
 		context.Background(),
 		m,
-		streamRequest{Values: []string{"value"}},
-		func(ctx context.Context, item string) error {
+		streamRequest{Values: []string{testValue}},
+		func(_ context.Context, _ string) error {
 			return nil
 		},
 	)
@@ -162,7 +162,7 @@ func TestRegisterStreamHandlerRejectsDuplicateRegistration(t *testing.T) {
 	m := mediator.New()
 
 	handler := mediator.StreamHandlerFunc[streamRequest, string](
-		func(ctx context.Context, request streamRequest, yield mediator.StreamYield[string]) error {
+		func(_ context.Context, _ streamRequest, _ mediator.StreamYield[string]) error {
 			return nil
 		},
 	)

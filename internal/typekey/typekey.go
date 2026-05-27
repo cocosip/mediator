@@ -1,3 +1,4 @@
+// Package typekey provides internal reflect.Type keys for generic registrations.
 package typekey
 
 import "reflect"

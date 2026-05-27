@@ -23,7 +23,7 @@ func ExampleSend() {
 	err := mediator.RegisterRequestHandler(
 		m,
 		mediator.RequestHandlerFunc[pingRequest, string](
-			func(ctx context.Context, request pingRequest) (string, error) {
+			func(_ context.Context, request pingRequest) (string, error) {
 				return "pong:" + request.Message, nil
 			},
 		),
@@ -35,7 +35,7 @@ func ExampleSend() {
 	response, err := mediator.Send[pingRequest, string](
 		context.Background(),
 		m,
-		pingRequest{Message: "hello"},
+		pingRequest{Message: testHello},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -52,7 +52,7 @@ func ExamplePublish() {
 	err := mediator.RegisterNotificationHandler(
 		m,
 		mediator.NotificationHandlerFunc[userRegisteredNotification](
-			func(ctx context.Context, notification userRegisteredNotification) error {
+			func(_ context.Context, notification userRegisteredNotification) error {
 				fmt.Println("welcome", notification.ID)
 				return nil
 			},
@@ -65,7 +65,7 @@ func ExamplePublish() {
 	if err := mediator.Publish(
 		context.Background(),
 		m,
-		userRegisteredNotification{ID: "user-1"},
+		userRegisteredNotification{ID: testUserID},
 	); err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func ExampleRegisterPipelineBehavior() {
 	err := mediator.RegisterRequestHandler(
 		m,
 		mediator.RequestHandlerFunc[pingRequest, string](
-			func(ctx context.Context, request pingRequest) (string, error) {
+			func(_ context.Context, request pingRequest) (string, error) {
 				return request.Message, nil
 			},
 		),
@@ -92,7 +92,7 @@ func ExampleRegisterPipelineBehavior() {
 	err = mediator.RegisterPipelineBehavior(
 		m,
 		mediator.PipelineBehaviorFunc[pingRequest, string](
-			func(ctx context.Context, request pingRequest, next mediator.RequestHandlerDelegate[string]) (string, error) {
+			func(ctx context.Context, _ pingRequest, next mediator.RequestHandlerDelegate[string]) (string, error) {
 				fmt.Println("before")
 				response, err := next(ctx)
 				if err != nil {
@@ -110,7 +110,7 @@ func ExampleRegisterPipelineBehavior() {
 	response, err := mediator.Send[pingRequest, string](
 		context.Background(),
 		m,
-		pingRequest{Message: "hello"},
+		pingRequest{Message: testHello},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -129,7 +129,7 @@ func ExampleRecoverBehavior() {
 	err := mediator.RegisterRequestHandler(
 		m,
 		mediator.RequestHandlerFunc[pingRequest, string](
-			func(ctx context.Context, request pingRequest) (string, error) {
+			func(_ context.Context, _ pingRequest) (string, error) {
 				panic("service unavailable")
 			},
 		),
@@ -141,7 +141,7 @@ func ExampleRecoverBehavior() {
 	err = mediator.RegisterPipelineBehavior(
 		m,
 		mediator.RecoverBehavior[pingRequest, string](
-			func(ctx context.Context, request pingRequest, recovered any) error {
+			func(_ context.Context, _ pingRequest, recovered any) error {
 				return fmt.Errorf("ping failed: %v", recovered)
 			},
 		),
@@ -153,7 +153,7 @@ func ExampleRecoverBehavior() {
 	_, err = mediator.Send[pingRequest, string](
 		context.Background(),
 		m,
-		pingRequest{Message: "hello"},
+		pingRequest{Message: testHello},
 	)
 	fmt.Println(err)
 	// Output:
@@ -166,7 +166,7 @@ func ExamplePreProcessor() {
 	err := mediator.RegisterRequestHandler(
 		m,
 		mediator.RequestHandlerFunc[pingRequest, string](
-			func(ctx context.Context, request pingRequest) (string, error) {
+			func(_ context.Context, request pingRequest) (string, error) {
 				return "pong:" + request.Message, nil
 			},
 		),
@@ -178,7 +178,7 @@ func ExamplePreProcessor() {
 	err = mediator.RegisterPipelineBehavior(
 		m,
 		mediator.PreProcessor[pingRequest, string](
-			func(ctx context.Context, request pingRequest) error {
+			func(_ context.Context, request pingRequest) error {
 				if request.Message == "" {
 					return errors.New("message is required")
 				}
@@ -207,7 +207,7 @@ func ExamplePostProcessor() {
 	err := mediator.RegisterRequestHandler(
 		m,
 		mediator.RequestHandlerFunc[pingRequest, string](
-			func(ctx context.Context, request pingRequest) (string, error) {
+			func(_ context.Context, request pingRequest) (string, error) {
 				return "pong:" + request.Message, nil
 			},
 		),
@@ -219,7 +219,7 @@ func ExamplePostProcessor() {
 	err = mediator.RegisterPipelineBehavior(
 		m,
 		mediator.PostProcessor[pingRequest, string](
-			func(ctx context.Context, request pingRequest, response string) error {
+			func(_ context.Context, request pingRequest, response string) error {
 				fmt.Println("handled", request.Message, "as", response)
 				return nil
 			},
@@ -232,7 +232,7 @@ func ExamplePostProcessor() {
 	response, err := mediator.Send[pingRequest, string](
 		context.Background(),
 		m,
-		pingRequest{Message: "hello"},
+		pingRequest{Message: testHello},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -269,7 +269,7 @@ func ExampleStream() {
 		context.Background(),
 		m,
 		pingRequest{Message: "item"},
-		func(ctx context.Context, item string) error {
+		func(_ context.Context, item string) error {
 			fmt.Println(item)
 			return nil
 		},

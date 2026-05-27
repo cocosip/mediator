@@ -7,9 +7,12 @@ import (
 )
 
 var (
-	ErrHandlerNotFound  = errors.New("mediator: handler not found")
+	// ErrHandlerNotFound reports a missing handler registration.
+	ErrHandlerNotFound = errors.New("mediator: handler not found")
+	// ErrDuplicateHandler reports a duplicate handler registration.
 	ErrDuplicateHandler = errors.New("mediator: duplicate handler")
-	ErrInvalidHandler   = errors.New("mediator: invalid handler")
+	// ErrInvalidHandler reports an invalid handler registration.
+	ErrInvalidHandler = errors.New("mediator: invalid handler")
 )
 
 // HandlerNotFoundError reports a missing request handler registration.

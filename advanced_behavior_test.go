@@ -20,7 +20,7 @@ func TestSendDoesNotRecoverPanicsByDefault(t *testing.T) {
 	m := mediator.New()
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
 			panic("handler panic")
 		},
 	))
@@ -38,7 +38,7 @@ func TestSendDoesNotRecoverPanicsByDefault(t *testing.T) {
 	_, _ = mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 }
 
@@ -48,7 +48,7 @@ func TestRecoverBehaviorConvertsPanicToError(t *testing.T) {
 	var recoveredValue any
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
 			panic("handler panic")
 		},
 	))
@@ -57,8 +57,8 @@ func TestRecoverBehaviorConvertsPanicToError(t *testing.T) {
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.RecoverBehavior[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest, recovered any) error {
-			if request.Value != "value" {
+		func(_ context.Context, request advancedRequest, recovered any) error {
+			if request.Value != testValue {
 				t.Fatalf("expected request value to be passed to recover callback, got %q", request.Value)
 			}
 
@@ -73,7 +73,7 @@ func TestRecoverBehaviorConvertsPanicToError(t *testing.T) {
 	_, err = mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err == nil {
 		t.Fatal("expected recovered panic error, got nil")
@@ -93,7 +93,7 @@ func TestRecoverBehaviorLeavesHandlerErrorsUnchanged(t *testing.T) {
 	handlerErr := errors.New("handler failed")
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
 			return advancedResponse{}, handlerErr
 		},
 	))
@@ -102,7 +102,7 @@ func TestRecoverBehaviorLeavesHandlerErrorsUnchanged(t *testing.T) {
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.RecoverBehavior[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest, recovered any) error {
+		func(_ context.Context, _ advancedRequest, _ any) error {
 			return errors.New("unexpected panic")
 		},
 	))
@@ -113,7 +113,7 @@ func TestRecoverBehaviorLeavesHandlerErrorsUnchanged(t *testing.T) {
 	_, err = mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err == nil {
 		t.Fatal("expected handler error, got nil")
@@ -128,7 +128,7 @@ func TestRecoverBehaviorDoesNotSwallowPanicWhenCallbackReturnsNil(t *testing.T) 
 	m := mediator.New()
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
 			panic("handler panic")
 		},
 	))
@@ -137,7 +137,7 @@ func TestRecoverBehaviorDoesNotSwallowPanicWhenCallbackReturnsNil(t *testing.T) 
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.RecoverBehavior[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest, recovered any) error {
+		func(_ context.Context, _ advancedRequest, _ any) error {
 			return nil
 		},
 	))
@@ -148,7 +148,7 @@ func TestRecoverBehaviorDoesNotSwallowPanicWhenCallbackReturnsNil(t *testing.T) 
 	_, err = mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err == nil {
 		t.Fatal("expected recovered panic error, got nil")
@@ -160,7 +160,7 @@ func TestPreProcessorRunsBeforeSuccessfulHandler(t *testing.T) {
 	steps := make([]string, 0, 2)
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, request advancedRequest) (advancedResponse, error) {
 			steps = append(steps, "handler:"+request.Value)
 			return advancedResponse{Value: request.Value + "-handled"}, nil
 		},
@@ -170,7 +170,7 @@ func TestPreProcessorRunsBeforeSuccessfulHandler(t *testing.T) {
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.PreProcessor[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) error {
+		func(_ context.Context, request advancedRequest) error {
 			steps = append(steps, "pre:"+request.Value)
 			return nil
 		},
@@ -182,13 +182,13 @@ func TestPreProcessorRunsBeforeSuccessfulHandler(t *testing.T) {
 	response, err := mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err != nil {
 		t.Fatalf("expected send to succeed, got %v", err)
 	}
 
-	if response.Value != "value-handled" {
+	if response.Value != testValueHandled {
 		t.Fatalf("expected handled response, got %q", response.Value)
 	}
 
@@ -204,7 +204,7 @@ func TestPreProcessorErrorShortCircuitsHandler(t *testing.T) {
 	handlerCalled := false
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
 			handlerCalled = true
 			return advancedResponse{Value: "handled"}, nil
 		},
@@ -214,7 +214,7 @@ func TestPreProcessorErrorShortCircuitsHandler(t *testing.T) {
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.PreProcessor[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) error {
+		func(_ context.Context, _ advancedRequest) error {
 			return preErr
 		},
 	))
@@ -225,7 +225,7 @@ func TestPreProcessorErrorShortCircuitsHandler(t *testing.T) {
 	_, err = mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err == nil {
 		t.Fatal("expected pre-processor error, got nil")
@@ -245,7 +245,7 @@ func TestPostProcessorRunsAfterSuccessfulHandler(t *testing.T) {
 	steps := make([]string, 0, 2)
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, request advancedRequest) (advancedResponse, error) {
 			steps = append(steps, "handler:"+request.Value)
 			return advancedResponse{Value: request.Value + "-handled"}, nil
 		},
@@ -255,7 +255,7 @@ func TestPostProcessorRunsAfterSuccessfulHandler(t *testing.T) {
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.PostProcessor[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest, response advancedResponse) error {
+		func(_ context.Context, request advancedRequest, response advancedResponse) error {
 			steps = append(steps, "post:"+request.Value+":"+response.Value)
 			return nil
 		},
@@ -267,13 +267,13 @@ func TestPostProcessorRunsAfterSuccessfulHandler(t *testing.T) {
 	response, err := mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err != nil {
 		t.Fatalf("expected send to succeed, got %v", err)
 	}
 
-	if response.Value != "value-handled" {
+	if response.Value != testValueHandled {
 		t.Fatalf("expected handled response, got %q", response.Value)
 	}
 
@@ -288,7 +288,7 @@ func TestPostProcessorReturnsErrorAfterSuccessfulHandler(t *testing.T) {
 	postErr := errors.New("post failed")
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest) (advancedResponse, error) {
+		func(_ context.Context, request advancedRequest) (advancedResponse, error) {
 			return advancedResponse{Value: request.Value + "-handled"}, nil
 		},
 	))
@@ -297,8 +297,8 @@ func TestPostProcessorReturnsErrorAfterSuccessfulHandler(t *testing.T) {
 	}
 
 	err = mediator.RegisterPipelineBehavior(m, mediator.PostProcessor[advancedRequest, advancedResponse](
-		func(ctx context.Context, request advancedRequest, response advancedResponse) error {
-			if response.Value != "value-handled" {
+		func(_ context.Context, _ advancedRequest, response advancedResponse) error {
+			if response.Value != testValueHandled {
 				t.Fatalf("expected post-processor to receive handler response, got %q", response.Value)
 			}
 
@@ -312,7 +312,7 @@ func TestPostProcessorReturnsErrorAfterSuccessfulHandler(t *testing.T) {
 	_, err = mediator.Send[advancedRequest, advancedResponse](
 		context.Background(),
 		m,
-		advancedRequest{Value: "value"},
+		advancedRequest{Value: testValue},
 	)
 	if err == nil {
 		t.Fatal("expected post-processor error, got nil")

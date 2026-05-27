@@ -11,7 +11,7 @@ func TestRequestSenderDispatchesRegisteredRequestHandler(t *testing.T) {
 	m := mediator.New()
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[createUserRequest, createUserResponse](
-		func(ctx context.Context, request createUserRequest) (createUserResponse, error) {
+		func(_ context.Context, request createUserRequest) (createUserResponse, error) {
 			return createUserResponse{ID: "sender-" + request.Name}, nil
 		},
 	))
@@ -20,7 +20,7 @@ func TestRequestSenderDispatchesRegisteredRequestHandler(t *testing.T) {
 	}
 
 	sender := mediator.RequestSender[createUserRequest, createUserResponse](m)
-	response, err := sender.Send(context.Background(), createUserRequest{Name: "alice"})
+	response, err := sender.Send(context.Background(), createUserRequest{Name: testAlice})
 	if err != nil {
 		t.Fatalf("expected sender to dispatch request, got %v", err)
 	}
@@ -35,7 +35,7 @@ func TestNotificationPublisherOfPublishesNotification(t *testing.T) {
 	callCount := 0
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			callCount++
 			return nil
 		},
@@ -45,7 +45,7 @@ func TestNotificationPublisherOfPublishesNotification(t *testing.T) {
 	}
 
 	publisher := mediator.NotificationPublisherOf[userCreatedNotification](m)
-	err = publisher.Publish(context.Background(), userCreatedNotification{ID: "user-1"})
+	err = publisher.Publish(context.Background(), userCreatedNotification{ID: testUserID})
 	if err != nil {
 		t.Fatalf("expected publisher facade to publish notification, got %v", err)
 	}
@@ -60,7 +60,7 @@ func TestRequestRegistrationRegistersRequestHandler(t *testing.T) {
 	registration := mediator.RequestRegistration[createUserRequest, createUserResponse](m)
 
 	err := registration.Register(mediator.RequestHandlerFunc[createUserRequest, createUserResponse](
-		func(ctx context.Context, request createUserRequest) (createUserResponse, error) {
+		func(_ context.Context, request createUserRequest) (createUserResponse, error) {
 			return createUserResponse{ID: request.Name}, nil
 		},
 	))
@@ -88,7 +88,7 @@ func TestNotificationRegistrationRegistersNotificationHandler(t *testing.T) {
 	registration := mediator.NotificationRegistration[userCreatedNotification](m)
 
 	err := registration.Register(mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			callCount++
 			return nil
 		},
@@ -97,7 +97,7 @@ func TestNotificationRegistrationRegistersNotificationHandler(t *testing.T) {
 		t.Fatalf("expected notification registration facade to succeed, got %v", err)
 	}
 
-	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if err != nil {
 		t.Fatalf("expected publish to succeed, got %v", err)
 	}
@@ -112,8 +112,8 @@ func TestBehaviorRegistrationRegistersPipelineBehavior(t *testing.T) {
 	registration := mediator.BehaviorRegistration[behaviorRequest, behaviorResponse](m)
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[behaviorRequest, behaviorResponse](
-		func(ctx context.Context, request behaviorRequest) (behaviorResponse, error) {
-			return behaviorResponse{Value: request.Value}, nil
+		func(_ context.Context, request behaviorRequest) (behaviorResponse, error) {
+			return behaviorResponse(request), nil
 		},
 	))
 	if err != nil {
@@ -121,7 +121,7 @@ func TestBehaviorRegistrationRegistersPipelineBehavior(t *testing.T) {
 	}
 
 	err = registration.Register(mediator.PipelineBehaviorFunc[behaviorRequest, behaviorResponse](
-		func(ctx context.Context, request behaviorRequest, next mediator.RequestHandlerDelegate[behaviorResponse]) (behaviorResponse, error) {
+		func(ctx context.Context, _ behaviorRequest, next mediator.RequestHandlerDelegate[behaviorResponse]) (behaviorResponse, error) {
 			response, err := next(ctx)
 			if err != nil {
 				return behaviorResponse{}, err
@@ -137,7 +137,7 @@ func TestBehaviorRegistrationRegistersPipelineBehavior(t *testing.T) {
 	response, err := mediator.Send[behaviorRequest, behaviorResponse](
 		context.Background(),
 		m,
-		behaviorRequest{Value: "value"},
+		behaviorRequest{Value: testValue},
 	)
 	if err != nil {
 		t.Fatalf("expected send to succeed, got %v", err)

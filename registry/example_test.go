@@ -20,7 +20,7 @@ func ExampleRegistry_Apply() {
 	registry.AddRequestHandler(
 		r,
 		mediator.RequestHandlerFunc[examplePing, string](
-			func(ctx context.Context, request examplePing) (string, error) {
+			func(_ context.Context, request examplePing) (string, error) {
 				return "pong:" + request.Message, nil
 			},
 		),
@@ -33,7 +33,7 @@ func ExampleRegistry_Apply() {
 	response, err := mediator.Send[examplePing, string](
 		context.Background(),
 		m,
-		examplePing{Message: "hello"},
+		examplePing{Message: testHello},
 	)
 	if err != nil {
 		log.Fatal(err)

@@ -14,7 +14,7 @@ func TestDefaultSequentialPublisherPublishesThroughMediator(t *testing.T) {
 	callCount := 0
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			callCount++
 			return nil
 		},
@@ -23,7 +23,7 @@ func TestDefaultSequentialPublisherPublishesThroughMediator(t *testing.T) {
 		t.Fatalf("expected registration to succeed, got %v", err)
 	}
 
-	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if err != nil {
 		t.Fatalf("expected publish to succeed, got %v", err)
 	}
@@ -61,7 +61,7 @@ func TestWithNotificationPublisherUsesCustomPublisher(t *testing.T) {
 	callCount := 0
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			callCount++
 			return nil
 		},
@@ -70,7 +70,7 @@ func TestWithNotificationPublisherUsesCustomPublisher(t *testing.T) {
 		t.Fatalf("expected registration to succeed, got %v", err)
 	}
 
-	notification := userCreatedNotification{ID: "user-1"}
+	notification := userCreatedNotification{ID: testUserID}
 	err = mediator.Publish(context.Background(), m, notification)
 	if err != nil {
 		t.Fatalf("expected publish to succeed, got %v", err)
@@ -102,7 +102,7 @@ func TestSequentialPublisherContinueOnErrorAggregatesFailures(t *testing.T) {
 	callCount := 0
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			callCount++
 			return firstErr
 		},
@@ -112,7 +112,7 @@ func TestSequentialPublisherContinueOnErrorAggregatesFailures(t *testing.T) {
 	}
 
 	err = mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			callCount++
 			return secondErr
 		},
@@ -121,7 +121,7 @@ func TestSequentialPublisherContinueOnErrorAggregatesFailures(t *testing.T) {
 		t.Fatalf("expected second registration to succeed, got %v", err)
 	}
 
-	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if err == nil {
 		t.Fatal("expected aggregated error, got nil")
 	}
@@ -146,8 +146,8 @@ func TestParallelPublisherRunsHandlersConcurrently(t *testing.T) {
 	done := make(chan error, 1)
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
-			started <- "first"
+		func(_ context.Context, _ userCreatedNotification) error {
+			started <- testFirst
 			<-release
 			return nil
 		},
@@ -157,7 +157,7 @@ func TestParallelPublisherRunsHandlersConcurrently(t *testing.T) {
 	}
 
 	err = mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			started <- "second"
 			<-release
 			return nil
@@ -168,7 +168,7 @@ func TestParallelPublisherRunsHandlersConcurrently(t *testing.T) {
 	}
 
 	go func() {
-		done <- mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+		done <- mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	}()
 
 	for i := 0; i < 2; i++ {
@@ -199,7 +199,7 @@ func TestParallelPublisherContinueOnErrorAggregatesFailures(t *testing.T) {
 	secondErr := errors.New("second failed")
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			return firstErr
 		},
 	))
@@ -208,7 +208,7 @@ func TestParallelPublisherContinueOnErrorAggregatesFailures(t *testing.T) {
 	}
 
 	err = mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			return secondErr
 		},
 	))
@@ -216,7 +216,7 @@ func TestParallelPublisherContinueOnErrorAggregatesFailures(t *testing.T) {
 		t.Fatalf("expected second registration to succeed, got %v", err)
 	}
 
-	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if err == nil {
 		t.Fatal("expected aggregated error, got nil")
 	}
@@ -239,7 +239,7 @@ func TestParallelPublisherReturnsContextErrorOnCancellation(t *testing.T) {
 	done := make(chan error, 1)
 
 	handler := mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(ctx context.Context, _ userCreatedNotification) error {
 			started <- struct{}{}
 			<-ctx.Done()
 			return ctx.Err()
@@ -257,7 +257,7 @@ func TestParallelPublisherReturnsContextErrorOnCancellation(t *testing.T) {
 	}
 
 	go func() {
-		done <- mediator.Publish(ctx, m, userCreatedNotification{ID: "user-1"})
+		done <- mediator.Publish(ctx, m, userCreatedNotification{ID: testUserID})
 	}()
 
 	for i := 0; i < 2; i++ {

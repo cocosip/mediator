@@ -16,6 +16,24 @@ It provides:
 go get github.com/cocosip/mediator
 ```
 
+## CI/CD
+
+The repository uses GitHub Actions for validation and tagged releases.
+
+- Pushes and pull requests to `master` run `go test ./...`, `go test -race ./...`,
+  and `golangci-lint`.
+- Pushing a tag that matches `v*` creates a GitHub Release.
+- Release notes are generated from commit subjects between the previous tag and
+  the current tag. If there is no previous tag, the notes include all commits
+  reachable from the first tag.
+
+Tag a release with:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
 ## Quick Start
 
 ### Request/response with `RequestHandlerFunc`

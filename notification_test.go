@@ -16,7 +16,7 @@ type userCreatedNotification struct {
 func TestPublishReturnsNilWhenNoHandlersAreRegistered(t *testing.T) {
 	m := mediator.New()
 
-	err := mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err := mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if err != nil {
 		t.Fatalf("expected publish with no handlers to succeed, got %v", err)
 	}
@@ -27,7 +27,7 @@ func TestPublishRunsHandlersInRegistrationOrder(t *testing.T) {
 	var calls []string
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, notification userCreatedNotification) error {
 			calls = append(calls, "first:"+notification.ID)
 			return nil
 		},
@@ -37,7 +37,7 @@ func TestPublishRunsHandlersInRegistrationOrder(t *testing.T) {
 	}
 
 	err = mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, notification userCreatedNotification) error {
 			calls = append(calls, "second:"+notification.ID)
 			return nil
 		},
@@ -46,7 +46,7 @@ func TestPublishRunsHandlersInRegistrationOrder(t *testing.T) {
 		t.Fatalf("expected second registration to succeed, got %v", err)
 	}
 
-	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if err != nil {
 		t.Fatalf("expected publish to succeed, got %v", err)
 	}
@@ -63,7 +63,7 @@ func TestPublishStopsOnFirstHandlerError(t *testing.T) {
 	calledSecond := false
 
 	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			return boom
 		},
 	))
@@ -72,7 +72,7 @@ func TestPublishStopsOnFirstHandlerError(t *testing.T) {
 	}
 
 	err = mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
-		func(ctx context.Context, notification userCreatedNotification) error {
+		func(_ context.Context, _ userCreatedNotification) error {
 			calledSecond = true
 			return nil
 		},
@@ -81,7 +81,7 @@ func TestPublishStopsOnFirstHandlerError(t *testing.T) {
 		t.Fatalf("expected second registration to succeed, got %v", err)
 	}
 
-	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: "user-1"})
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
 	if !errors.Is(err, boom) {
 		t.Fatalf("expected boom error, got %v", err)
 	}
