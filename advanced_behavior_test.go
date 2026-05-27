@@ -155,6 +155,37 @@ func TestRecoverBehaviorDoesNotSwallowPanicWhenCallbackReturnsNil(t *testing.T) 
 	}
 }
 
+func TestRecoverBehaviorRePanicsWhenCallbackIsNil(t *testing.T) {
+	m := mediator.New()
+
+	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
+		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
+			panic("handler panic")
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected request handler registration to succeed, got %v", err)
+	}
+
+	err = mediator.RegisterPipelineBehavior(m, mediator.RecoverBehavior[advancedRequest, advancedResponse](nil))
+	if err != nil {
+		t.Fatalf("expected recover behavior registration to succeed, got %v", err)
+	}
+
+	defer func() {
+		recovered := recover()
+		if recovered != "handler panic" {
+			t.Fatalf("expected handler panic to be re-panicked, got %v", recovered)
+		}
+	}()
+
+	_, _ = mediator.Send[advancedRequest, advancedResponse](
+		context.Background(),
+		m,
+		advancedRequest{Value: testValue},
+	)
+}
+
 func TestPreProcessorRunsBeforeSuccessfulHandler(t *testing.T) {
 	m := mediator.New()
 	steps := make([]string, 0, 2)
@@ -320,6 +351,37 @@ func TestPostProcessorReturnsErrorAfterSuccessfulHandler(t *testing.T) {
 
 	if !errors.Is(err, postErr) {
 		t.Fatalf("expected post-processor error, got %v", err)
+	}
+}
+
+func TestPostProcessorAllowsNilCallback(t *testing.T) {
+	m := mediator.New()
+
+	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
+		func(_ context.Context, request advancedRequest) (advancedResponse, error) {
+			return advancedResponse{Value: request.Value + "-handled"}, nil
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected request handler registration to succeed, got %v", err)
+	}
+
+	err = mediator.RegisterPipelineBehavior(m, mediator.PostProcessor[advancedRequest, advancedResponse](nil))
+	if err != nil {
+		t.Fatalf("expected post-processor registration to succeed, got %v", err)
+	}
+
+	response, err := mediator.Send[advancedRequest, advancedResponse](
+		context.Background(),
+		m,
+		advancedRequest{Value: testValue},
+	)
+	if err != nil {
+		t.Fatalf("expected send to succeed, got %v", err)
+	}
+
+	if response.Value != testValueHandled {
+		t.Fatalf("expected handled response, got %q", response.Value)
 	}
 }
 

@@ -193,3 +193,130 @@ func TestRegisterStreamHandlerRejectsNilHandler(t *testing.T) {
 		t.Fatalf("expected ErrInvalidHandler, got %v", err)
 	}
 }
+
+func TestStreamReturnsContextErrorBeforeDispatch(t *testing.T) {
+	m := mediator.New()
+	handlerCalled := false
+
+	err := mediator.RegisterStreamHandler(m, mediator.StreamHandlerFunc[streamRequest, string](
+		func(_ context.Context, _ streamRequest, _ mediator.StreamYield[string]) error {
+			handlerCalled = true
+			return nil
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected stream handler registration to succeed, got %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = mediator.Stream[streamRequest, string](ctx, m, streamRequest{Values: []string{testFirst}}, nil)
+	if err == nil {
+		t.Fatal("expected context cancellation, got nil")
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+
+	if handlerCalled {
+		t.Fatal("expected handler not to run when context is already canceled")
+	}
+}
+
+func TestStreamAllowsNilYieldCallback(t *testing.T) {
+	m := mediator.New()
+
+	err := mediator.RegisterStreamHandler(m, mediator.StreamHandlerFunc[streamRequest, string](
+		func(ctx context.Context, request streamRequest, yield mediator.StreamYield[string]) error {
+			for _, value := range request.Values {
+				if err := yield(ctx, value); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected stream handler registration to succeed, got %v", err)
+	}
+
+	err = mediator.Stream[streamRequest, string](
+		context.Background(),
+		m,
+		streamRequest{Values: []string{testFirst, testSecond}},
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("expected nil yield callback to be allowed, got %v", err)
+	}
+}
+
+func TestStreamReturnsYieldError(t *testing.T) {
+	m := mediator.New()
+	yieldErr := errors.New("yield failed")
+
+	err := mediator.RegisterStreamHandler(m, mediator.StreamHandlerFunc[streamRequest, string](
+		func(ctx context.Context, _ streamRequest, yield mediator.StreamYield[string]) error {
+			return yield(ctx, testFirst)
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected stream handler registration to succeed, got %v", err)
+	}
+
+	err = mediator.Stream(
+		context.Background(),
+		m,
+		streamRequest{Values: []string{testFirst}},
+		func(_ context.Context, _ string) error {
+			return yieldErr
+		},
+	)
+	if err == nil {
+		t.Fatal("expected yield error, got nil")
+	}
+
+	if !errors.Is(err, yieldErr) {
+		t.Fatalf("expected yield error, got %v", err)
+	}
+}
+
+func TestStreamReturnsYieldContextErrorBeforeCallbackRuns(t *testing.T) {
+	m := mediator.New()
+	yieldCalled := false
+
+	err := mediator.RegisterStreamHandler(m, mediator.StreamHandlerFunc[streamRequest, string](
+		func(ctx context.Context, _ streamRequest, yield mediator.StreamYield[string]) error {
+			yieldCtx, cancel := context.WithCancel(ctx)
+			cancel()
+			return yield(yieldCtx, testFirst)
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected stream handler registration to succeed, got %v", err)
+	}
+
+	err = mediator.Stream(
+		context.Background(),
+		m,
+		streamRequest{Values: []string{testFirst}},
+		func(_ context.Context, _ string) error {
+			yieldCalled = true
+			return nil
+		},
+	)
+	if err == nil {
+		t.Fatal("expected context cancellation from yield context, got nil")
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+
+	if yieldCalled {
+		t.Fatal("expected canceled yield context to prevent callback execution")
+	}
+}

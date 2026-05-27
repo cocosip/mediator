@@ -156,3 +156,13 @@ func TestRegistryReturnsRegistrationErrors(t *testing.T) {
 		t.Fatalf("expected ErrDuplicateHandler, got %v", err)
 	}
 }
+
+func TestNilRegistryApplySucceeds(t *testing.T) {
+	m := mediator.New()
+	var r *registry.Registry
+
+	err := r.Apply(m)
+	if err != nil {
+		t.Fatalf("expected nil registry apply to succeed, got %v", err)
+	}
+}

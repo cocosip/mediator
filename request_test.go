@@ -98,3 +98,30 @@ func TestRegisterRequestHandlerRejectsNilHandler(t *testing.T) {
 		t.Fatalf("expected ErrInvalidHandler, got %v", err)
 	}
 }
+
+func TestSendReturnsHandlerErrorWithoutPipelineBehaviors(t *testing.T) {
+	m := mediator.New()
+	handlerErr := errors.New("request failed")
+
+	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[createUserRequest, createUserResponse](
+		func(_ context.Context, _ createUserRequest) (createUserResponse, error) {
+			return createUserResponse{}, handlerErr
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected registration to succeed, got %v", err)
+	}
+
+	_, err = mediator.Send[createUserRequest, createUserResponse](
+		context.Background(),
+		m,
+		createUserRequest{Name: testAlice},
+	)
+	if err == nil {
+		t.Fatal("expected handler error, got nil")
+	}
+
+	if !errors.Is(err, handlerErr) {
+		t.Fatalf("expected handler error, got %v", err)
+	}
+}

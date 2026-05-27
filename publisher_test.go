@@ -279,3 +279,136 @@ func TestParallelPublisherReturnsContextErrorOnCancellation(t *testing.T) {
 		t.Fatal("expected parallel publish to return after cancellation")
 	}
 }
+
+type stubNotificationExecutor func(context.Context, any) error
+
+func (f stubNotificationExecutor) Handle(ctx context.Context, notification any) error {
+	return f(ctx, notification)
+}
+
+func TestWithNotificationPublisherNilRestoresDefaultSequentialPublisher(t *testing.T) {
+	m := mediator.New(mediator.WithNotificationPublisher(nil))
+	callCount := 0
+
+	err := mediator.RegisterNotificationHandler(m, mediator.NotificationHandlerFunc[userCreatedNotification](
+		func(_ context.Context, _ userCreatedNotification) error {
+			callCount++
+			return nil
+		},
+	))
+	if err != nil {
+		t.Fatalf("expected registration to succeed, got %v", err)
+	}
+
+	err = mediator.Publish(context.Background(), m, userCreatedNotification{ID: testUserID})
+	if err != nil {
+		t.Fatalf("expected default sequential publisher to run, got %v", err)
+	}
+
+	if callCount != 1 {
+		t.Fatalf("expected handler to run once, got %d", callCount)
+	}
+}
+
+func TestSequentialPublisherReturnsContextErrorBeforeHandling(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	called := false
+
+	err := (mediator.SequentialPublisher{}).Publish(
+		ctx,
+		[]mediator.NotificationExecutor{
+			stubNotificationExecutor(func(context.Context, any) error {
+				called = true
+				return nil
+			}),
+		},
+		userCreatedNotification{ID: testUserID},
+	)
+	if err == nil {
+		t.Fatal("expected context cancellation, got nil")
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+
+	if called {
+		t.Fatal("expected canceled context to stop handler execution")
+	}
+}
+
+func TestParallelPublisherReturnsContextErrorBeforeStartingHandlers(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	called := false
+
+	err := (mediator.ParallelPublisher{}).Publish(
+		ctx,
+		[]mediator.NotificationExecutor{
+			stubNotificationExecutor(func(context.Context, any) error {
+				called = true
+				return nil
+			}),
+		},
+		userCreatedNotification{ID: testUserID},
+	)
+	if err == nil {
+		t.Fatal("expected context cancellation, got nil")
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+
+	if called {
+		t.Fatal("expected canceled context to stop parallel handler startup")
+	}
+}
+
+func TestParallelPublisherStopOnFirstErrorReturnsHandlerError(t *testing.T) {
+	boom := errors.New("boom")
+
+	err := (mediator.ParallelPublisher{}).Publish(
+		context.Background(),
+		[]mediator.NotificationExecutor{
+			stubNotificationExecutor(func(context.Context, any) error {
+				return boom
+			}),
+		},
+		userCreatedNotification{ID: testUserID},
+	)
+	if err == nil {
+		t.Fatal("expected handler error, got nil")
+	}
+
+	if !errors.Is(err, boom) {
+		t.Fatalf("expected handler error, got %v", err)
+	}
+}
+
+func TestParallelPublisherReturnsContextErrorAfterHandlersFinish(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := (mediator.ParallelPublisher{ErrorStrategy: mediator.ContinueOnError}).Publish(
+		ctx,
+		[]mediator.NotificationExecutor{
+			stubNotificationExecutor(func(context.Context, any) error {
+				cancel()
+				return nil
+			}),
+			stubNotificationExecutor(func(context.Context, any) error {
+				return nil
+			}),
+		},
+		userCreatedNotification{ID: testUserID},
+	)
+	if err == nil {
+		t.Fatal("expected context cancellation after handlers finish, got nil")
+	}
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
