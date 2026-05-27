@@ -21,7 +21,7 @@ func TestSendDoesNotRecoverPanicsByDefault(t *testing.T) {
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
 		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
-			panic("handler panic")
+			panic(testHandlerPanic)
 		},
 	))
 	if err != nil {
@@ -30,7 +30,7 @@ func TestSendDoesNotRecoverPanicsByDefault(t *testing.T) {
 
 	defer func() {
 		recovered := recover()
-		if recovered != "handler panic" {
+		if recovered != testHandlerPanic {
 			t.Fatalf("expected handler panic to propagate, got %v", recovered)
 		}
 	}()
@@ -49,7 +49,7 @@ func TestRecoverBehaviorConvertsPanicToError(t *testing.T) {
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
 		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
-			panic("handler panic")
+			panic(testHandlerPanic)
 		},
 	))
 	if err != nil {
@@ -83,7 +83,7 @@ func TestRecoverBehaviorConvertsPanicToError(t *testing.T) {
 		t.Fatalf("expected recovered panic error, got %v", err)
 	}
 
-	if recoveredValue != "handler panic" {
+	if recoveredValue != testHandlerPanic {
 		t.Fatalf("expected recovered value to be captured, got %v", recoveredValue)
 	}
 }
@@ -129,7 +129,7 @@ func TestRecoverBehaviorDoesNotSwallowPanicWhenCallbackReturnsNil(t *testing.T) 
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
 		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
-			panic("handler panic")
+			panic(testHandlerPanic)
 		},
 	))
 	if err != nil {
@@ -160,7 +160,7 @@ func TestRecoverBehaviorRePanicsWhenCallbackIsNil(t *testing.T) {
 
 	err := mediator.RegisterRequestHandler(m, mediator.RequestHandlerFunc[advancedRequest, advancedResponse](
 		func(_ context.Context, _ advancedRequest) (advancedResponse, error) {
-			panic("handler panic")
+			panic(testHandlerPanic)
 		},
 	))
 	if err != nil {
@@ -174,7 +174,7 @@ func TestRecoverBehaviorRePanicsWhenCallbackIsNil(t *testing.T) {
 
 	defer func() {
 		recovered := recover()
-		if recovered != "handler panic" {
+		if recovered != testHandlerPanic {
 			t.Fatalf("expected handler panic to be re-panicked, got %v", recovered)
 		}
 	}()
