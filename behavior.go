@@ -50,7 +50,7 @@ func (a pipelineBehaviorAdapter[TRequest, TResponse]) handle(
 				return zero, err
 			}
 
-			return response.(TResponse), nil
+			return castResponse[TResponse](response)
 		},
 	)
 }

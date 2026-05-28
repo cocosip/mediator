@@ -145,6 +145,45 @@ func TestSendAllowsNilInterfaceResponse(t *testing.T) {
 	}
 }
 
+func TestSendWithPipelineAllowsNilInterfaceResponse(t *testing.T) {
+	type interfaceRequest struct{}
+
+	m := mediator.New()
+
+	err := mediator.RegisterRequestHandler(
+		m,
+		mediator.RequestHandlerFunc[interfaceRequest, fmt.Stringer](
+			func(_ context.Context, _ interfaceRequest) (fmt.Stringer, error) {
+				return nil, nil
+			},
+		),
+	)
+	if err != nil {
+		t.Fatalf("expected registration to succeed, got %v", err)
+	}
+
+	err = mediator.RegisterPipelineBehavior(
+		m,
+		mediator.PreProcessor[interfaceRequest, fmt.Stringer](nil),
+	)
+	if err != nil {
+		t.Fatalf("expected behavior registration to succeed, got %v", err)
+	}
+
+	response, err := mediator.Send[interfaceRequest, fmt.Stringer](
+		context.Background(),
+		m,
+		interfaceRequest{},
+	)
+	if err != nil {
+		t.Fatalf("expected send to succeed, got %v", err)
+	}
+
+	if response != nil {
+		t.Fatalf("expected nil interface response, got %#v", response)
+	}
+}
+
 func TestSendReturnsHandlerErrorWithoutPipelineBehaviors(t *testing.T) {
 	m := mediator.New()
 	handlerErr := errors.New("request failed")
