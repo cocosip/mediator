@@ -103,3 +103,17 @@ func TestRegisterNotificationHandlerRejectsNilHandler(t *testing.T) {
 		t.Fatalf("expected ErrInvalidHandler, got %v", err)
 	}
 }
+
+func TestRegisterNotificationHandlerRejectsTypedNilFunctionHandler(t *testing.T) {
+	m := mediator.New()
+	var handler mediator.NotificationHandlerFunc[userCreatedNotification]
+
+	err := mediator.RegisterNotificationHandler(m, handler)
+	if err == nil {
+		t.Fatal("expected invalid handler error, got nil")
+	}
+
+	if !errors.Is(err, mediator.ErrInvalidHandler) {
+		t.Fatalf("expected ErrInvalidHandler, got %v", err)
+	}
+}

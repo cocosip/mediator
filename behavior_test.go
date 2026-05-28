@@ -215,6 +215,20 @@ func TestRegisterPipelineBehaviorRejectsNilHandler(t *testing.T) {
 	}
 }
 
+func TestRegisterPipelineBehaviorRejectsTypedNilFunctionHandler(t *testing.T) {
+	m := mediator.New()
+	var behavior mediator.PipelineBehaviorFunc[behaviorRequest, behaviorResponse]
+
+	err := mediator.RegisterPipelineBehavior(m, behavior)
+	if err == nil {
+		t.Fatal("expected invalid handler error, got nil")
+	}
+
+	if !errors.Is(err, mediator.ErrInvalidHandler) {
+		t.Fatalf("expected ErrInvalidHandler, got %v", err)
+	}
+}
+
 func TestSendWithoutPipelineBehaviorsUsesExistingHandlerPath(t *testing.T) {
 	m := mediator.New()
 

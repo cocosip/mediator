@@ -278,7 +278,7 @@ Make notification execution strategy configurable.
 
 - `StopOnFirstError` returns the first handler error.
 - `ContinueOnError` attempts all handlers and aggregates failures with `errors.Join`.
-- Parallel publishing waits for handler completion.
+- Parallel publishing waits for all started handlers to finish before returning.
 - Context cancellation is respected before starting work and while collecting results.
 - Publisher implementations must not leak goroutines.
 

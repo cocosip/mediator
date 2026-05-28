@@ -34,7 +34,7 @@ func (a requestHandlerAdapter[TRequest, TResponse]) handle(ctx context.Context, 
 
 // RegisterRequestHandler registers the handler for a request/response pair.
 func RegisterRequestHandler[TRequest any, TResponse any](m *Mediator, handler RequestHandler[TRequest, TResponse]) error {
-	if handler == nil {
+	if isNilValue(handler) {
 		return InvalidHandlerError{
 			Kind:         "request",
 			MessageType:  typekey.Of[TRequest](),
@@ -82,7 +82,7 @@ func Send[TRequest any, TResponse any](ctx context.Context, m *Mediator, request
 			return zero, err
 		}
 
-		return response.(TResponse), nil
+		return castResponse[TResponse](response)
 	}
 
 	next := func(nextCtx context.Context) (any, error) {
@@ -102,5 +102,5 @@ func Send[TRequest any, TResponse any](ctx context.Context, m *Mediator, request
 		return zero, err
 	}
 
-	return response.(TResponse), nil
+	return castResponse[TResponse](response)
 }

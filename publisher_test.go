@@ -387,6 +387,62 @@ func TestParallelPublisherStopOnFirstErrorReturnsHandlerError(t *testing.T) {
 	}
 }
 
+func TestParallelPublisherStopOnFirstErrorWaitsForStartedHandlers(t *testing.T) {
+	started := make(chan string, 2)
+	release := make(chan struct{})
+	finished := make(chan string, 2)
+	boom := errors.New("boom")
+	done := make(chan error, 1)
+
+	go func() {
+		done <- (mediator.ParallelPublisher{}).Publish(
+			context.Background(),
+			[]mediator.NotificationExecutor{
+				stubNotificationExecutor(func(context.Context, any) error {
+					started <- testFirst
+					<-release
+					finished <- testFirst
+					return boom
+				}),
+				stubNotificationExecutor(func(context.Context, any) error {
+					started <- testSecond
+					<-release
+					finished <- testSecond
+					return nil
+				}),
+			},
+			userCreatedNotification{ID: testUserID},
+		)
+	}()
+
+	for i := 0; i < 2; i++ {
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			t.Fatal("expected both handlers to start")
+		}
+	}
+
+	close(release)
+
+	for i := 0; i < 2; i++ {
+		select {
+		case <-finished:
+		case <-time.After(time.Second):
+			t.Fatal("expected started handlers to finish before publish returns")
+		}
+	}
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, boom) {
+			t.Fatalf("expected handler error, got %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected parallel publish to return after started handlers finish")
+	}
+}
+
 func TestParallelPublisherReturnsContextErrorAfterHandlersFinish(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

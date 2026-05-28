@@ -50,7 +50,7 @@ func (a streamHandlerAdapter[TRequest, TItem]) handle(
 
 // RegisterStreamHandler registers the stream handler for a request/item pair.
 func RegisterStreamHandler[TRequest any, TItem any](m *Mediator, handler StreamHandler[TRequest, TItem]) error {
-	if handler == nil {
+	if isNilValue(handler) {
 		return InvalidHandlerError{
 			Kind:         "stream",
 			MessageType:  typekey.Of[TRequest](),

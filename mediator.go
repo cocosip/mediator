@@ -2,6 +2,7 @@ package mediator
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -46,4 +47,32 @@ func New(options ...Option) *Mediator {
 	}
 
 	return m
+}
+
+func isNilValue(value any) bool {
+	if value == nil {
+		return true
+	}
+
+	rv := reflect.ValueOf(value)
+	switch rv.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return rv.IsNil()
+	default:
+		return false
+	}
+}
+
+func castResponse[T any](response any) (T, error) {
+	var zero T
+	if response == nil {
+		return zero, nil
+	}
+
+	typed, ok := response.(T)
+	if !ok {
+		return zero, fmt.Errorf("mediator: invalid response type %T", response)
+	}
+
+	return typed, nil
 }

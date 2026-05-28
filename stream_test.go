@@ -194,6 +194,20 @@ func TestRegisterStreamHandlerRejectsNilHandler(t *testing.T) {
 	}
 }
 
+func TestRegisterStreamHandlerRejectsTypedNilFunctionHandler(t *testing.T) {
+	m := mediator.New()
+	var handler mediator.StreamHandlerFunc[streamRequest, string]
+
+	err := mediator.RegisterStreamHandler(m, handler)
+	if err == nil {
+		t.Fatal("expected invalid handler error, got nil")
+	}
+
+	if !errors.Is(err, mediator.ErrInvalidHandler) {
+		t.Fatalf("expected ErrInvalidHandler, got %v", err)
+	}
+}
+
 func TestStreamReturnsContextErrorBeforeDispatch(t *testing.T) {
 	m := mediator.New()
 	handlerCalled := false

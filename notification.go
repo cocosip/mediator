@@ -134,20 +134,37 @@ func (p ParallelPublisher) Publish(ctx context.Context, handlers []NotificationE
 	}()
 
 	var errs []error
+	var firstErr error
 	for err := range results {
 		if err == nil {
 			continue
 		}
 
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return err
+		if firstErr == nil && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
+			firstErr = err
 		}
 
 		if p.ErrorStrategy != ContinueOnError {
-			return err
+			if firstErr == nil {
+				firstErr = err
+			}
+
+			continue
+		}
+
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			if firstErr == nil {
+				firstErr = err
+			}
+
+			continue
 		}
 
 		errs = append(errs, err)
+	}
+
+	if firstErr != nil {
+		return firstErr
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -163,7 +180,7 @@ func (p ParallelPublisher) Publish(ctx context.Context, handlers []NotificationE
 
 // RegisterNotificationHandler registers a notification handler.
 func RegisterNotificationHandler[TNotification any](m *Mediator, handler NotificationHandler[TNotification]) error {
-	if handler == nil {
+	if isNilValue(handler) {
 		return InvalidHandlerError{
 			Kind:        "notification",
 			MessageType: typekey.Of[TNotification](),

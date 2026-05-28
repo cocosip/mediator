@@ -248,7 +248,7 @@ func WithNotificationPublisher(publisher NotificationPublisher) Option
 Built-in publishers:
 
 - `SequentialPublisher`: runs handlers in registration order.
-- `ParallelPublisher`: runs handlers concurrently and waits for completion according to its error strategy.
+- `ParallelPublisher`: runs handlers concurrently and waits for all started handlers to finish before returning.
 
 Error strategy:
 
@@ -266,6 +266,7 @@ Rules:
 - `StopOnFirstError` returns the first error.
 - `ContinueOnError` attempts all handlers and returns `errors.Join(...)` when one or more handlers fail.
 - `ParallelPublisher` should respect context cancellation and avoid goroutine leaks.
+- In parallel mode, handlers that have already started are allowed to finish before `Publish` returns.
 - Publisher implementations should return context errors when cancellation prevents meaningful completion.
 - The default mediator publisher is `SequentialPublisher{ErrorStrategy: StopOnFirstError}`.
 

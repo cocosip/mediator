@@ -57,7 +57,7 @@ func (a pipelineBehaviorAdapter[TRequest, TResponse]) handle(
 
 // RegisterPipelineBehavior registers a behavior for a request/response pair.
 func RegisterPipelineBehavior[TRequest any, TResponse any](m *Mediator, behavior PipelineBehavior[TRequest, TResponse]) error {
-	if behavior == nil {
+	if isNilValue(behavior) {
 		return InvalidHandlerError{
 			Kind:         "pipeline",
 			MessageType:  typekey.Of[TRequest](),
