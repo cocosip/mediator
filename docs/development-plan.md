@@ -19,7 +19,7 @@ The first usable release should support:
 - configurable notification publishing strategies
 - idiomatic `context.Context` and `error` handling
 
-Advanced capabilities such as stream requests, recover helpers, pre/post processor helpers, and DI integrations are planned after the core API is stable.
+Advanced capabilities such as stream requests, recover helpers, pre/post processor helpers, and grouped registration helpers are planned after the core API is stable.
 
 ## Development Principles
 
@@ -28,7 +28,6 @@ Advanced capabilities such as stream requests, recover helpers, pre/post process
 - Favor explicit APIs over automatic scanning.
 - Keep MediatR concepts where useful, but choose Go-native semantics.
 - Treat `docs/design.md` as the source of truth for API shape and behavior.
-- Do not add DI or integration packages until the core API has been exercised.
 - Avoid speculative features in the first working release.
 
 ## Target Repository Shape
@@ -60,9 +59,6 @@ Project docs:
 Optional future packages:
 
 - `registry`
-- `dig`
-- `fx`
-- `wire`
 
 ## Milestone Overview
 
@@ -73,7 +69,7 @@ Optional future packages:
 | M3 | Request pipeline | Request behaviors can wrap, short-circuit, and transform handler execution. |
 | M4 | Publisher strategies | Notification execution supports sequential/parallel strategies and error aggregation. |
 | M5 | Core stabilization | Public API, docs, examples, race tests, and compatibility checks are complete. |
-| M6 | Advanced extensions | Stream, recover, processors, registry, and DI integrations are evaluated and implemented selectively. |
+| M6 | Advanced extensions | Stream, recover, processors, and registry support are evaluated and implemented selectively. |
 
 ## Phase 1: Project Scaffold
 
@@ -339,7 +335,7 @@ Prepare the core package for first practical use.
 - Public API names are consistent and Go-like.
 - Documentation shows the intended request, notification, and behavior usage.
 - All exported identifiers have useful comments if linting requires them.
-- No optional DI or stream work is mixed into the core release.
+- No optional advanced helper packages or stream work is mixed into the core release.
 - Tests cover the documented behavior from Phases 1-4.
 
 ### Verification
@@ -461,34 +457,6 @@ Acceptance criteria:
 - It simplifies startup registration without hiding errors.
 - It remains optional.
 
-### 6.5 DI Integration Packages
-
-Purpose:
-
-- Add integration packages only when a real DI target is selected.
-
-Checklist:
-
-- [ ] Select one DI integration target.
-- [ ] Confirm the integration package belongs outside the core package.
-- [ ] Define integration API shape.
-- [ ] Implement integration using only public mediator APIs.
-- [ ] Add integration tests or examples appropriate to the selected DI tool.
-- [ ] Document dependency impact.
-- [ ] Run the full test suite.
-
-Candidate packages:
-
-- `dig`
-- `fx`
-- `wire`
-
-Acceptance criteria:
-
-- Only one integration target is implemented at a time.
-- Integration packages do not add dependencies to the core package.
-- Integration code uses public APIs only.
-
 ## Release Boundaries
 
 ### First Usable Release
@@ -503,7 +471,6 @@ Excludes:
 - recover behavior
 - pre/post helpers
 - registry package
-- DI integration packages
 
 ### Advanced Release
 
@@ -515,10 +482,6 @@ Implemented in this increment:
 - Pre/post processor helpers.
 - Callback-based stream requests.
 - Optional `registry` package.
-
-Deferred:
-
-- DI integration packages remain unimplemented until a real integration target is selected.
 
 ## Risks and Mitigations
 
@@ -569,17 +532,6 @@ Mitigation:
 - Prefer deterministic aggregation for parallel continue-on-error.
 - Ensure tests cover cancellation and error aggregation.
 
-### Premature Integration Packages
-
-Risk:
-
-- DI adapters can distort the core API too early.
-
-Mitigation:
-
-- Ship core first.
-- Add integrations only after a real target is chosen.
-
 ## Open Questions
 
 - What is the final module path?
@@ -587,7 +539,6 @@ Mitigation:
 - Should request handler keys include both request and response type, or should a request type map to exactly one response type? The current design uses both types.
 - Should parallel stop-on-first-error cancel sibling handlers with a derived context, or only return the first observed error after started handlers complete?
 - Which stream API shape best fits the intended users? Resolved for this increment: callback API.
-- Which DI integration, if any, is actually needed first?
 
 ## Definition of Done
 

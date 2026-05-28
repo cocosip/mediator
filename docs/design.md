@@ -14,7 +14,7 @@ MediatR's public model includes request/response messages, commands, queries, no
 - Do not require message structs to implement framework marker interfaces.
 - Use `context.Context` for cancellation, deadlines, and request-scoped values.
 - Use Go `error` values instead of exception-specific abstractions.
-- Keep optional DI, scanning, and integration behavior outside the core package.
+- Keep optional helper packages and scanning behavior outside the core package.
 - Make the first implementation small, testable, and stable before adding advanced features.
 
 ## Package Direction
@@ -33,16 +33,13 @@ mediator/
   internal/typekey/    // reflect.Type based keys for generic registrations
 ```
 
-Optional integration packages can be added later:
+Optional helper packages can be added later:
 
 ```text
 mediator/registry       // batch registration helpers
-mediator/dig            // dig integration, if needed
-mediator/fx             // fx integration, if needed
-mediator/wire           // wire provider helpers, if needed
 ```
 
-The core package must not depend on these integration packages.
+The core package must not depend on optional helper packages.
 
 ## Core API
 
@@ -585,7 +582,6 @@ Scope:
 - `RecoverBehavior`
 - pre/post processor helpers
 - optional `registry` package for batch registration
-- optional DI integration packages only when a real target is selected
 
 Acceptance tests:
 
@@ -594,7 +590,6 @@ Acceptance tests:
 - Recover behavior converts registered request panics into errors.
 - Pre/post helpers preserve the same behavior ordering rules.
 - Registry depends only on the public core API.
-- Integration packages depend only on the public core API if a DI target is selected later.
 
 ## References
 
